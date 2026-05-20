@@ -27,7 +27,19 @@ next-generation scheduling challenges in heterogeneous high-performance computin
 For now, it is a draft that is evolving as it progresses...
 
 
+## For more information
 
+<img src="Images/P0001.jpg" width="100%" />
+
+---
+
+## 📝 **Author**
+
+**Dr. Patrick Lemoine**  
+*Engineer Expert in Scientific Computing*  
+[LinkedIn](https://www.linkedin.com/in/patrick-lemoine-7ba11b72/)
+
+---
 
 
 
