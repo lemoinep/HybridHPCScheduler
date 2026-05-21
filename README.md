@@ -93,11 +93,11 @@ $$
 Optionally, the objective can be extended to include additional terms, for example:
 
 $$
-\min \left(
-\alpha C_{\max}
+\min \Big(
+\alpha\, C_{\max}
 + \beta \sum_{j,s} t_{j,s}
-+ \gamma \sum_{j,s,r} cost_{j,s,r}\, x_{j,s,r}
-\right)
++ \gamma \sum_{j,s,r} \mathrm{cost}_{j,s,r}\, x_{j,s,r}
+\Big)
 $$
 
 where:
