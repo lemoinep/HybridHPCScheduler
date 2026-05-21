@@ -97,7 +97,7 @@ $$
 \alpha C_{\max} 
 + \beta \sum_{j,s} t_{j,s} 
 + \gamma \sum_{j,s,r} \text{cost}_{j,s,r} \, x_{j,s,r}
-\right),
+\right)
 $$
 
 where:
