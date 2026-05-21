@@ -234,6 +234,74 @@ The system supports:
 
 ***
 
+## My Case Study
+
+
+- **devices**,
+- **memory levels**,
+- **network links**,
+- and the **task pipeline**.
+
+```mermaid
+flowchart LR
+  subgraph Devices["Devices"]
+    CPU0["CPU0\nkind=cpu\nspeed=120\nthreads=64"]
+    CPU1["CPU1\nkind=cpu\nspeed=120\nthreads=64"]
+    GPU0["GPU0\nkind=gpu\nspeed=1200\nthreads=256"]
+    GPU1["GPU1\nkind=gpu\nspeed=1100\nthreads=256"]
+    NPU0["NPU0\nkind=npu\nspeed=800\nthreads=128"]
+    TPU0["TPU0\nkind=tpu\nspeed=950\nthreads=128"]
+    DPU0["DPU0\nkind=dpu\nspeed=250\nthreads=32"]
+  end
+
+  subgraph Memory["Memory levels"]
+    CPU0M["DRAM 131072 / 80 / 200\nL3 32768 / 12 / 800"]
+    CPU1M["DRAM 131072 / 80 / 200\nL3 32768 / 12 / 800"]
+    GPU0M["HBM 49152 / 3 / 1600\nL2 8192 / 1 / 3000"]
+    GPU1M["HBM 49152 / 3 / 1600\nL2 8192 / 1 / 3000"]
+    NPU0M["SRAM 16384 / 2 / 1400\nCACHE 4096 / 1 / 2500"]
+    TPU0M["HBM 32768 / 3 / 1500\nCACHE 4096 / 1 / 2500"]
+    DPU0M["SRAM 8192 / 2 / 1000\nCACHE 2048 / 1 / 1500"]
+  end
+
+  subgraph Tasks["Tasks"]
+    ingest["ingest\ncompute=40\npreferred=dpu\npriority=3"]
+    decode["decode\ncompute=80\npreferred=cpu\npriority=3"]
+    preprocess["preprocess\ncompute=120\npreferred=cpu\npriority=4"]
+    infer_a["infer_a\ncompute=500\npreferred=gpu\npriority=10"]
+    infer_b["infer_b\ncompute=420\npreferred=npu\npriority=9"]
+    fuse["fuse\ncompute=90\npreferred=tpu\npriority=8"]
+    postprocess["postprocess\ncompute=70\npreferred=cpu\npriority=6"]
+    store["store\ncompute=30\npreferred=dpu\npriority=2"]
+  end
+
+  CPU0 --> CPU0M
+  CPU1 --> CPU1M
+  GPU0 --> GPU0M
+  GPU1 --> GPU1M
+  NPU0 --> NPU0M
+  TPU0 --> TPU0M
+  DPU0 --> DPU0M
+
+  CPU0 <-->|PCI 120 / 8| CPU1
+  CPU0 <-->|PCI 120 / 8| DPU0
+  CPU0 <-->|PCI 800 / 3| NPU0
+  CPU0 <-->|XGMI 2000 / 1| GPU0
+  CPU0 <-->|XGMI 2000 / 1| GPU1
+  GPU0 <-->|XGMI 2000 / 1| GPU1
+  GPU0 <-->|XGMI 2000 / 1| TPU0
+  GPU1 <-->|XGMI 2000 / 1| TPU0
+  NPU0 <-->|PCI 800 / 3| TPU0
+  DPU0 <-->|PCI 250 / 8| GPU0
+
+  ingest --> decode --> preprocess
+  preprocess --> infer_a
+  preprocess --> infer_b
+  infer_a --> fuse
+  infer_b --> fuse
+  fuse --> postprocess --> store
+```
+This graph separates three dimensions of the model: the **devices**, the **memory** attached to each device, and the **dependency chain** between tasks. Network connections are stylized to reflect the concepts of `bandwidth` and `latency` stored in `links`, even though Mermaid simplifies the representation of the multi-edges found in the `MultiDiGraph`.
 
 
 
