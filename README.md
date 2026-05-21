@@ -46,12 +46,11 @@ The scheduler can solve this problem using:
 ### Problem Setting
 
 Let:
-
-- \(J = \{1, 2, \dots, n\}\) be the set of jobs,
-- \(S_j = \{1, 2, \dots, m_j\}\) be the ordered set of segments of job \(j\),
-- \(R = \{1, 2, \dots, p\}\) be the set of heterogeneous resources (devices),
-- \(d_{j,s} > 0\) be the processing time (duration) of segment \((j,s)\),
-- \(R_{j,s} \subseteq R\) be the set of feasible resources for segment \((j,s)\).
+- `J = {1, 2, ..., n}` be the set of jobs,
+- `S_j = {1, 2, ..., m_j}` be the ordered set of segments of job `j`,
+- `R = {1, 2, ..., p}` be the set of heterogeneous resources (devices),
+- `d_{j,s} > 0` be the processing time (duration) of segment `(j,s)`,
+- `R_{j,s} subseteq R` be the set of feasible resources for segment `(j,s)`.
 
 Each segment \((j,s)\) may:
 
@@ -63,12 +62,15 @@ Each segment \((j,s)\) may:
 
 For each segment \((j,s)\) and resource \(r \in R\), we define:
 
-- \(x_{j,s,r} \in \{0,1\}\): binary variable, equal to 1 if segment \((j,s)\) is assigned to resource \(r\), and 0 otherwise,
-- \(t_{j,s} \ge 0\): start time of segment \((j,s)\),
-- \(c_{j,s}\): completion time of segment \((j,s)\), defined as  
-  \[
-  c_{j,s} = t_{j,s} + d_{j,s}.
-  \]
+For each segment `(j,s)` and resource `r ∈ R`, we define:
+
+- `x_{j,s,r} ∈ {0,1}`: binary variable, equal to 1 if segment `(j,s)` is assigned to resource `r`, and 0 otherwise,
+- `t_{j,s} ≥ 0`: start time of segment `(j,s)`,
+- `c_{j,s}`: completion time of segment `(j,s)`, defined as:
+
+$$
+c_{j,s} = t_{j,s} + d_{j,s}
+$$
 
 The **makespan** (total completion time of all jobs) is:
 
@@ -100,8 +102,8 @@ $$
 
 where:
 
-- \(\alpha, \beta, \gamma\) are user-defined weights,
-- \(\text{cost}_{j,s,r}\) can represent energy cost, monetary cost, or resource-specific penalty.
+- `α, β, γ` are user-defined weights,
+- `cost_{j,s,r}` can represent energy cost, monetary cost, or resource-specific penalty.
 
 ### Constraints
 
