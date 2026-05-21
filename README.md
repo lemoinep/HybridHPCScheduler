@@ -80,14 +80,14 @@ $$
 
 When needed, we can also define auxiliary binary variables for ordering on a resource:
 
-- \(z_{a,b,r} \in \{0,1\}\): equals 1 if segment \(a\) is scheduled before segment \(b\) on resource \(r\).
+- `z_{a,b,r} in {0,1}`: equals 1 if segment `a` is scheduled before segment `b` on resource `r`.
 
 ### Objective Function
 
 The primary objective is to **minimize the makespan**:
 
 $$
-\min \; C_{\max}.
+\min C_{\max}.
 $$
 
 Optionally, the objective can be extended to include additional terms, for example:
@@ -160,7 +160,9 @@ x_{j,s,r} = 0
 \quad \forall r \notin R_{j,s}.
 $$
 
+
 In practice, this is enforced by only creating variables \(x_{j,s,r}\) for \(r \in R_{j,s}\).
+
 
 #### 5. Horizon Constraint (Optional)
 
