@@ -1,7 +1,7 @@
 <img src="Images/P0002.jpg" width="100%" />
 
 
-# Hybrid HPC Scheduler
+# **Hybrid HPC Scheduler**
 
 HybridHPCScheduler is an experimental framework for the development of an AI-based APIC system.
 It is designed to support intelligent scheduling and resource orchestration in heterogeneous HPC environments.
@@ -27,7 +27,7 @@ Overall, this project provides a unified platform combining constraint-based opt
 next-generation scheduling challenges in heterogeneous high-performance computing systems.
 
 
-For now, it is a draft that is evolving as it progresses...
+For now, it is only a draft that is evolving as it progresses...
 
 
 ***
@@ -308,6 +308,24 @@ This graph separates three dimensions of the model: the **devices**, the **memor
 ## For more information
 
 <img src="Images/P0001.jpg" width="100%" />
+
+
+### Detail information Level 1
+
+<img src="Images/Z20260521_000001.jpg" width="100%" />
+<img src="Images/Z20260521_000002.jpg" width="100%" />
+<img src="Images/Z20260521_000003.jpg" width="100%" />
+<img src="Images/Z20260521_000004.jpg" width="100%" />
+<img src="Images/Z20260521_000005.jpg" width="100%" />
+<img src="Images/Z20260521_000006.jpg" width="100%" />
+<img src="Images/Z20260521_000007.jpg" width="100%" />
+<img src="Images/Z20260521_000008.jpg" width="100%" />
+<img src="Images/Z20260521_000009.jpg" width="100%" />
+<img src="Images/Z20260521_000010.jpg" width="100%" />
+<img src="Images/Z20260521_000011.jpg" width="100%" />
+<img src="Images/Z20260521_000012.jpg" width="100%" />
+
+---
 
 ---
 

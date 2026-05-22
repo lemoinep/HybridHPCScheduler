@@ -5,16 +5,15 @@ from gymnasium import spaces
 from .scheduler import APICScheduler
 from .model import APICModel
 import os
+import time
 
 DEBUG_LOG = "env_debug.log"
 
 
 class APICEnv(gym.Env):
     metadata = {"render_modes": []}
-    
 
-    def __init__(self, model: APICModel, tick_ms: int = 1000,
-                 episode_limit: int = 30000, trace_file="output/trace.jsonl"):
+    def __init__(self, model: APICModel, tick_ms: int = 1000, episode_limit: int = 30000, trace_file="output/trace.jsonl"):
         super().__init__()
         self.model = model
         self.scheduler = APICScheduler(model)
@@ -27,15 +26,17 @@ class APICEnv(gym.Env):
         self.segments_log = []
         self.segment_states = {}
         self.solve_failed = False
+        self.segment_counter = 0
+        self.episode_offset = 0
 
         self.device_names = list(self.model.devices.keys())
         self.task_names = list(self.model.tasks.keys())
 
         self.action_space = spaces.MultiDiscrete([
-            6,                               # action_type (0..5)
-            max(1, len(self.task_names)),    # task_id
-            max(1, len(self.device_names)),  # device_id
-            5,                               # priority_delta (0..4)
+            6,
+            max(1, len(self.task_names)),
+            max(1, len(self.device_names)),
+            5,
         ])
 
         self.observation_space = spaces.Dict({
@@ -50,7 +51,6 @@ class APICEnv(gym.Env):
         os.makedirs(os.path.dirname(self.trace_file), exist_ok=True)
         self._trace = open(self.trace_file, "w", encoding="utf-8")
 
-    
     def close(self):
         if getattr(self, "_trace", None):
             self._trace.close()
@@ -84,8 +84,7 @@ class APICEnv(gym.Env):
                 "replanned": np.array([replanned], dtype=np.int64),
             }
 
-        active = self.schedule[(self.schedule.start <= self.now) &
-                               (self.schedule.end > self.now)]
+        active = self.schedule[(self.schedule.start <= self.now) & (self.schedule.end > self.now)]
         completed = self.schedule[self.schedule.end <= self.now]
         late = self.schedule[self.schedule.end > self.schedule.deadline]
         congestion = int((active.groupby("device").size() ** 2).sum()) if len(active) else 0
@@ -102,117 +101,143 @@ class APICEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-
+    
         self.now = 0
         self.segments_log = []
         self.segment_states = {}
         self.solve_failed = False
-
-        # Planning initial
+        self.segment_counter = 0
+        
+        self.episode_offset = int(np.random.randint(0, 3))
+        self.random_priority_shift = int(np.random.randint(-1, 2))
+        self.random_deadline_shift = int(np.random.randint(-500, 501))
+    
+        if len(self.scheduler.model.tasks) > 0:
+            first_task_key = list(self.scheduler.model.tasks.keys())[0]
+            first_task = self.scheduler.model.tasks[first_task_key]
+            first_task.priority = max(1, min(10, first_task.priority + self.random_priority_shift))
+            first_task.deadline = max(1000, first_task.deadline + self.random_deadline_shift)
+    
+        t0 = time.perf_counter()
         self.schedule = self.scheduler.solve_window(horizon=self.episode_limit)
-        if self.schedule is None:
-            print("ERROR: initial solve_window returned None in reset()")
-            #raise RuntimeError("initial schedule is None in reset()")
-        else :
+        t1 = time.perf_counter()
+        
+        if self.schedule is not None:
             for idx, _ in self.schedule.iterrows():
                 self.segment_states[idx] = 0
-
+        else:
+            print("WARNING: initial solve_window returned None in reset()")
+    
         obs = self._observe(replanned=0)
         info = {"action_mask": None}
+        t2 = time.perf_counter()
+    
+        #print(f"[RESET] solve={t1 - t0:.4f}s observe={t2 - t1:.4f}s total={t2 - t0:.4f}s")
+    
         self._log({
-            "event": "step",
+            "event": "reset",
             "time": int(self.now),
             "obs": {k: int(v[0]) for k, v in obs.items()},
+            "episode_offset": int(self.episode_offset),
+            "priority_shift": int(self.random_priority_shift),
+            "deadline_shift": int(self.random_deadline_shift),
         })
+    
         return obs, info
 
 
     def apply_action(self, action):
         if self.schedule is None:
             return 0, 0.0, 0.0
-
+    
         action = np.asarray(action).astype(int).tolist()
         action_type = int(action[0])
-
+    
         replanned = 0
         migration_cost = 0.0
         continuity_bonus = 0.0
-
+    
         task_name = self.task_names[0]
         task = self.model.tasks[task_name]
-
+    
         if task.current_device in self.device_names:
             current_idx = self.device_names.index(task.current_device)
         else:
             current_idx = 0
             task.current_device = self.device_names[current_idx]
-
+    
         old_device_name = task.current_device
-
+    
         if action_type == 0:
             pass
-
+    
         elif action_type == 1:
             device_id = min(current_idx + 1, len(self.device_names) - 1)
             device_name = self.device_names[device_id]
             if task.current_device != device_name:
                 migration_cost = self.scheduler.migration_cost(task.current_device, device_name, task)
-            task.current_device = device_name
-            seg = self.scheduler.make_segment(task_name, self.now, device=device_name, migrated=True)
-            if seg is not None:
-                self.scheduler.apply_segment(seg)
-                self._record_segment(seg, action_type)
-                replanned = 1
-
+                task.current_device = device_name
+                seg = self.scheduler.make_segment(task_name, self.now, device=device_name, migrated=True)
+                if seg is not None:
+                    self.scheduler.apply_segment(seg)
+                    self._record_segment(seg, action_type)
+                    self.segment_counter += 1
+                    replanned = 1
+    
         elif action_type == 2:
             device_id = max(current_idx - 1, 0)
             device_name = self.device_names[device_id]
             if task.current_device != device_name:
                 migration_cost = self.scheduler.migration_cost(task.current_device, device_name, task)
-            task.current_device = device_name
-            seg = self.scheduler.make_segment(task_name, self.now, device=device_name, migrated=True)
-            if seg is not None:
-                self.scheduler.apply_segment(seg)
-                self._record_segment(seg, action_type)
-                replanned = 1
-
+                task.current_device = device_name
+                seg = self.scheduler.make_segment(task_name, self.now, device=device_name, migrated=True)
+                if seg is not None:
+                    self.scheduler.apply_segment(seg)
+                    self._record_segment(seg, action_type)
+                    self.segment_counter += 1
+                    replanned = 1
+    
         elif action_type == 3:
             task.priority = min(task.priority + 1, 10)
-            replanned = 1
-
+            # Pas de replanification immédiate
+    
         elif action_type == 4:
             task.priority = max(task.priority - 1, 1)
-            replanned = 1
-
+            # Pas de replanification immédiate
+    
         elif action_type == 5:
             replanned = 1
-
-        if replanned and self.schedule is not None:
-            hints = {}
-            for _, row in self.schedule.iterrows():
-                hints[("x", row.task, row.device)] = 1
-                hints[("s", row.task)] = int(row.start)
-
-            new_schedule = self.scheduler.solve_window(
-                horizon=self.episode_limit,
-                hints=hints,
-            )
-
-            if new_schedule is not None:
-                self.schedule = new_schedule
-
+    
+        # Continuity bonus
         if action_type == 0:
             continuity_bonus = 0.0
         elif task.current_device and task.current_device == old_device_name:
             continuity_bonus = 1.0
-
+    
         return replanned, migration_cost, continuity_bonus
 
-  
+
     def step(self, action):
+        t0 = time.perf_counter()
+        
         replanned, migration_cost, continuity_bonus = self.apply_action(action)
         self.now += self.tick_ms
-
+    
+        t1 = time.perf_counter()
+    
+        # Vérifier si replanification nécessaire
+        if replanned == 1 and not getattr(self, "solve_failed", False):
+            self.schedule = self.scheduler.solve_window(horizon=self.episode_limit)
+            
+            if self.schedule is not None:
+                for idx, _ in self.schedule.iterrows():
+                    if idx not in self.segment_states:
+                        self.segment_states[idx] = 0
+            else:
+                self.solve_failed = True
+    
+        t2 = time.perf_counter()
+    
         if getattr(self, "solve_failed", False):
             obs = self._observe(replanned=replanned)
             info = {
@@ -221,7 +246,7 @@ class APICEnv(gym.Env):
                 "action_mask": None,
             }
             return obs, -100.0, True, False, info
-
+    
         if self.schedule is None:
             print("WARNING: schedule is None in step()")
             obs = self._observe(replanned=replanned)
@@ -231,51 +256,55 @@ class APICEnv(gym.Env):
                 "action_mask": None,
             }
             return obs, -100.0, True, False, info
-
+    
         active = self.schedule[(self.schedule.start <= self.now) & (self.schedule.end > self.now)]
         completed = self.schedule[self.schedule.end <= self.now]
         late = self.schedule[self.schedule.end > self.schedule.deadline]
         congestion = int((active.groupby("device").size() ** 2).sum()) if len(active) else 0
-
+    
         progress_bonus = 0.0
         completion_bonus = 0.0
-
+    
         for idx, seg in self.schedule.iterrows():
             prev_state = self.segment_states.get(idx, 0)
             current_state = 0
-
+    
             if self.now >= seg["start"]:
                 current_state = 1
             if self.now >= seg["end"]:
                 current_state = 2
-
+    
             if current_state > prev_state:
                 progress_bonus += 1.0
             if current_state == 2 and prev_state < 2:
                 completion_bonus += 1.0
-
+    
             self.segment_states[idx] = current_state
-
+    
         late_penalty = min(len(late), 10)
         cong_penalty = min(congestion, 20)
         mig_penalty = min(float(migration_cost), 100.0)
-
+    
         reward = (
             -0.02 * float(cong_penalty)
             - 0.1 * float(late_penalty)
             - 0.01 * float(len(active))
             - 0.01 * float(mig_penalty)
             + 0.2 * float(replanned)
-            + 0.02 * float(continuity_bonus)
+            + 0.01 * float(continuity_bonus)
             + 0.15 * float(progress_bonus)
             + 0.3 * float(completion_bonus)
         )
-
+    
         terminated = self.now >= int(self.schedule["end"].max())
         truncated = self.now >= self.episode_limit
-
+    
         obs = self._observe(replanned=replanned)
-
+        t3 = time.perf_counter()
+    
+        #if replanned:
+        #    print(f"[STEP] apply={t1-t0:.4f}s solve={t2-t1:.4f}s compute={t3-t2:.4f}s total={t3-t0:.4f}s")
+    
         info = {
             "time": int(self.now),
             "active_tasks": int(len(active)),
@@ -288,9 +317,10 @@ class APICEnv(gym.Env):
             "progress_bonus": float(progress_bonus),
             "completion_bonus": float(completion_bonus),
             "segments": int(len(self.segments_log)),
+            "segment_counter": int(self.segment_counter),
             "action_mask": None,
         }
-
+    
         action_list = np.asarray(action).astype(int).tolist()
         self._log({
             "event": "step",
@@ -300,7 +330,7 @@ class APICEnv(gym.Env):
             "info": info,
             "segments_last": self.segments_log[-1] if self.segments_log else None,
         })
-
+    
         with open(DEBUG_LOG, "a", encoding="utf-8") as f:
             f.write("----- STEP DEBUG -----\n")
             f.write(f"action = {action_list}\n")
@@ -315,10 +345,11 @@ class APICEnv(gym.Env):
             f.write(f"congestion = {congestion}\n")
             f.write(f"reward = {reward}\n")
             f.write("----------------------\n")
+    
+        return obs, reward, terminated, truncated, info   
 
-        return obs, reward, terminated, truncated, info
-        
-        
+
+
     def export_segments_csv(self, filename="output/segments.csv"):
         import pandas as pd
         os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -340,11 +371,9 @@ class APICEnv(gym.Env):
 
         for i, row in df.iterrows():
             label = f"{row['task']}:{row['segment_id']}"
-            ax.barh(label, row["duration"], left=row["start"],
-                    color=colors[i], edgecolor="black")
+            ax.barh(label, row["duration"], left=row["start"], color=colors[i], edgecolor="black")
             if bool(row["migrated"]):
-                ax.text(row["start"] + row["duration"] / 2, i, "M",
-                        ha="center", va="center", color="white", fontsize=8)
+                ax.text(row["start"] + row["duration"] / 2, i, "M", ha="center", va="center", color="white", fontsize=8)
 
         ax.set_xlabel("Time")
         ax.set_ylabel("Task segments")

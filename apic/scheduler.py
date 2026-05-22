@@ -1,3 +1,6 @@
+# The goal here is to clearly define the scheduler that will be improved over time.
+
+
 import pandas as pd
 from ortools.sat.python import cp_model
 from .model import APICModel, PlannedSegment
@@ -101,21 +104,22 @@ class APICScheduler:
         fixed_device = fixed_device or {}
         hints = hints or {}
 
-        # --- 1) Essai avec contraintes complètes (deadline) ---
+        # Definition of strategies...
+        # --- 1) Try with complete constraints (deadline) ---
         df = self._solve_cp(horizon, fixed_starts, fixed_device, hints, relax_deadline=False)
         if df is not None:
             return df
 
         #print("WARNING: CP-SAT infeasible with deadlines, trying relaxed deadlines")
 
-        # --- 2) Essai en relâchant la contrainte de deadline ---
+        # --- 2) Try by relaxing the deadline constraint ---
         df = self._solve_cp(horizon, fixed_starts, fixed_device, hints, relax_deadline=True)
         if df is not None:
             return df
 
         print("WARNING: CP-SAT still infeasible, falling back to heuristic plan")
 
-        # --- 3) Heuristique simple : planifier séquentiellement ---
+        # --- 3) Simple heuristic: sequential planning ---
         return self._heuristic_plan(horizon)
         
         
@@ -152,11 +156,11 @@ class APICScheduler:
 
             model.Add(e[t] == s[t] + dur[t])
 
-            # Deadline stricte ou relâchée
+            # Strict or relaxed deadline
             if not relax_deadline:
                 model.Add(e[t] <= task.deadline)
             else:
-                # on autorise e[t] > deadline, la pénalité sera dans l'objectif
+                # We allow e[t] > deadline, the penalty will be in the objective.
                 pass
 
             for d in D:
@@ -189,7 +193,8 @@ class APICScheduler:
             task = self.model.tasks[t]
             objective.append(task.priority * e[t])
             if relax_deadline:
-                # pénalité de retard si on dépasse la deadline
+                # Penalty for delay if we exceed the deadline
+                # and
                 late_penalty = model.NewIntVar(0, horizon, f"late_{t}")
                 model.Add(late_penalty >= e[t] - task.deadline)
                 model.Add(late_penalty >= 0)
@@ -238,8 +243,10 @@ class APICScheduler:
         
         
     def _heuristic_plan(self, horizon):
-        # Plan très simple : pour chaque tâche, choisir le "meilleur" device
-        # puis les exécuter séquentiellement sur ce device, sans tenir compte des deps.
+        # Very simple plan: for each task, choose the "best" device,
+        # then run them sequentially on this device, ignoring dependencies.
+        # ...
+
         rows = []
         now = 0
         for t in self.model.tasks:
@@ -293,7 +300,7 @@ class APICScheduler:
         )
         
     def apply_segment(self, seg):
-        """Applique un segment planifié au modèle (avance la progression de la tâche)."""
+        # Apply a scheduled segment to the model (advance the task progress).
         task = self.model.tasks[seg.task]
         task.progress = min(task.compute, task.progress + seg.compute)
         task.current_device = seg.device

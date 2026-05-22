@@ -1,3 +1,7 @@
+# To do: Integrate the loading of the hardware configuration model (CPU, GPU, TPU, NPU, DPU) 
+# to maximize system optimization.
+# Loading the exascale mapping, for example. To be defined.
+
 from dataclasses import dataclass
 from typing import Dict, List
 import networkx as nx
