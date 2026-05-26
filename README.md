@@ -247,6 +247,18 @@ The system supports:
 
 This graph separates three dimensions of the model: the **devices**, the **memory** attached to each device, and the **dependency chain** between tasks. Network connections are stylized to reflect the concepts of `bandwidth` and `latency` stored in `links`, even though Mermaid simplifies the representation of the multi-edges found in the `MultiDiGraph`.
 
+## A quick technical hardware refresher
+
+* **CPU (Central Processing Unit)**: The general-purpose "brain" of a computer that executes instructions sequentially for diverse tasks like running applications, managing memory, and controlling system operations. Its flexibility allows it to handle any software, from word processing to banking transactions.
+
+* **GPU (Graphics Processing Unit)**: A massively parallel processor with thousands of ALUs designed for high-throughput tasks like rendering 3D graphics, video processing, and parallel computations. It excels at matrix operations in neural networks by performing thousands of simultaneous multiplications and additions.
+
+* **TPU (Tensor Processing Unit)**: Google's custom ASIC specifically built for machine learning workloads, optimized for fast matrix operations in neural networks. Unlike general-purpose CPUs/GPUs, it uses a systolic array architecture with thousands of multiply-accumulate units directly connected for maximum ML throughput.
+
+* **NPU (Neural Processing Unit)**: A specialized processor designed exclusively for AI/ML algorithms and neural network inference, handling mathematical operations specific to machine learning in parallel. It offloads AI workloads from CPU/GPU for better energy efficiency, measured in TOPS (trillions of operations per second).
+
+* **DPU (Data Processing Unit)**: A specialized processor that offloads data-intensive tasks like networking, storage, and security from the CPU, enabling efficient data center operations. It handles data movement, compression, encryption, and network functions, allowing CPUs to focus on application logic.
+
 
 ## For more information
 
