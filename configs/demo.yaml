@@ -1,0 +1,281 @@
+# Demo Configuration
+# AI Inference Pipeline with all device types
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 120
+    threads: 64
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+
+  - name: CPU1
+    kind: cpu
+    speed: 120
+    threads: 64
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+
+  - name: GPU0
+    kind: gpu
+    speed: 1200
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+
+  - name: GPU1
+    kind: gpu
+    speed: 1100
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+
+  - name: NPU0
+    kind: npu
+    speed: 800
+    threads: 128
+    memories:
+      - name: SRAM
+        capacity: 16384
+        latency: 2
+        bandwidth: 1400
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+
+  - name: TPU0
+    kind: tpu
+    speed: 950
+    threads: 128
+    memories:
+      - name: HBM
+        capacity: 32768
+        latency: 3
+        bandwidth: 1500
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+
+  - name: DPU0
+    kind: dpu
+    speed: 250
+    threads: 32
+    memories:
+      - name: SRAM
+        capacity: 8192
+        latency: 2
+        bandwidth: 1000
+      - name: CACHE
+        capacity: 2048
+        latency: 1
+        bandwidth: 1500
+
+topology:
+  # CPU0 connections
+  - [CPU0, CPU1, 120, 8, pci]
+  - [CPU0, GPU0, 120, 8, pci]
+  - [CPU0, GPU1, 120, 8, pci]
+  - [CPU0, NPU0, 800, 3, xgmi]
+  - [CPU0, TPU0, 120, 8, pci]
+  - [CPU0, DPU0, 250, 8, pci]
+  
+  # CPU1 connections
+  - [CPU1, CPU0, 120, 8, pci]
+  - [CPU1, GPU0, 120, 8, pci]
+  - [CPU1, GPU1, 120, 8, pci]
+  - [CPU1, NPU0, 800, 3, xgmi]
+  - [CPU1, TPU0, 120, 8, pci]
+  - [CPU1, DPU0, 250, 8, pci]
+  
+  # GPU0 connections
+  - [GPU0, CPU0, 120, 8, pci]
+  - [GPU0, CPU1, 120, 8, pci]
+  - [GPU0, GPU1, 2000, 1, xgmi]
+  - [GPU0, NPU0, 800, 3, xgmi]
+  - [GPU0, TPU0, 2000, 1, xgmi]
+  - [GPU0, DPU0, 250, 8, pci]
+  
+  # GPU1 connections
+  - [GPU1, CPU0, 120, 8, pci]
+  - [GPU1, CPU1, 120, 8, pci]
+  - [GPU1, GPU0, 2000, 1, xgmi]
+  - [GPU1, NPU0, 800, 3, xgmi]
+  - [GPU1, TPU0, 2000, 1, xgmi]
+  - [GPU1, DPU0, 250, 8, pci]
+  
+  # NPU0 connections
+  - [NPU0, CPU0, 800, 3, xgmi]
+  - [NPU0, CPU1, 800, 3, xgmi]
+  - [NPU0, GPU0, 800, 3, xgmi]
+  - [NPU0, GPU1, 800, 3, xgmi]
+  - [NPU0, TPU0, 800, 3, xgmi]
+  - [NPU0, DPU0, 800, 3, xgmi]
+  
+  # TPU0 connections
+  - [TPU0, CPU0, 120, 8, pci]
+  - [TPU0, CPU1, 120, 8, pci]
+  - [TPU0, GPU0, 2000, 1, xgmi]
+  - [TPU0, GPU1, 2000, 1, xgmi]
+  - [TPU0, NPU0, 800, 3, xgmi]
+  - [TPU0, DPU0, 250, 8, pci]
+  
+  # DPU0 connections
+  - [DPU0, CPU0, 250, 8, pci]
+  - [DPU0, CPU1, 250, 8, pci]
+  - [DPU0, GPU0, 250, 8, pci]
+  - [DPU0, GPU1, 250, 8, pci]
+  - [DPU0, NPU0, 800, 3, xgmi]
+  - [DPU0, TPU0, 250, 8, pci]
+
+tasks:
+  # Complete AI Inference Pipeline
+  - name: ingest
+    compute: 40
+    memory: 512
+    data_in: 64
+    data_out: 64
+    preferred_kind: dpu
+    priority: 3
+    deadline: 4000
+    preemptible: true
+    device: DPU0
+
+  - name: decode
+    compute: 80
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: cpu
+    priority: 3
+    deadline: 6000
+    preemptible: true
+    device: CPU0
+
+  - name: preprocess
+    compute: 120
+    memory: 2048
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 4
+    deadline: 8000
+    preemptible: true
+    device: CPU0
+
+  - name: infer_a
+    compute: 500
+    memory: 4096
+    data_in: 512
+    data_out: 256
+    preferred_kind: gpu
+    priority: 10
+    deadline: 12000
+    preemptible: true
+    device: GPU0
+
+  - name: infer_b
+    compute: 420
+    memory: 4096
+    data_in: 512
+    data_out: 256
+    preferred_kind: npu
+    priority: 9
+    deadline: 12000
+    preemptible: true
+    device: NPU0
+
+  - name: fuse
+    compute: 90
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: tpu
+    priority: 8
+    deadline: 15000
+    preemptible: true
+    device: TPU0
+
+  - name: postprocess
+    compute: 70
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: cpu
+    priority: 6
+    deadline: 18000
+    preemptible: true
+    device: CPU1
+
+  - name: store
+    compute: 30
+    memory: 512
+    data_in: 64
+    data_out: 64
+    preferred_kind: dpu
+    priority: 2
+    deadline: 20000
+    preemptible: true
+    device: DPU0
+
+dependencies:
+  # Sequential Inference Pipeline
+  - src: ingest
+    dst: decode
+    bytes: 64
+
+  - src: decode
+    dst: preprocess
+    bytes: 128
+
+  - src: preprocess
+    dst: infer_a
+    bytes: 512
+
+  - src: preprocess
+    dst: infer_b
+    bytes: 512
+
+  - src: infer_a
+    dst: fuse
+    bytes: 128
+
+  - src: infer_b
+    dst: fuse
+    bytes: 128
+
+  - src: fuse
+    dst: postprocess
+    bytes: 64
+
+  - src: postprocess
+    dst: store
+    bytes: 32

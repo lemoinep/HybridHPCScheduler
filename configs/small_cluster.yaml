@@ -1,0 +1,76 @@
+# Configuration small cluster
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 100
+    threads: 32
+    memories:
+      - name: DRAM
+        capacity: 65536
+        latency: 80
+        bandwidth: 150
+      - name: L3
+        capacity: 16384
+        latency: 12
+        bandwidth: 600
+
+  - name: GPU0
+    kind: gpu
+    speed: 1000
+    threads: 128
+    memories:
+      - name: HBM
+        capacity: 24576
+        latency: 3
+        bandwidth: 1200
+      - name: L2
+        capacity: 4096
+        latency: 1
+        bandwidth: 2000
+
+topology:
+  # [source, destination, bandwidth, latency, kind]
+  - [CPU0, GPU0, 100, 8, pci]
+  - [GPU0, CPU0, 100, 8, pci]
+
+tasks:
+  - name: task_0
+    compute: 100
+    memory: 2048
+    data_in: 128
+    data_out: 128
+    preferred_kind: cpu
+    priority: 5
+    deadline: 8000
+    preemptible: true
+    device: CPU0
+
+  - name: task_1
+    compute: 300
+    memory: 4096
+    data_in: 256
+    data_out: 256
+    preferred_kind: gpu
+    priority: 7
+    deadline: 10000
+    preemptible: true
+    device: GPU0
+
+  - name: task_2
+    compute: 150
+    memory: 3072
+    data_in: 192
+    data_out: 192
+    preferred_kind: gpu
+    priority: 6
+    deadline: 12000
+    preemptible: true
+    device: GPU0
+
+dependencies:
+  - src: task_0
+    dst: task_1
+    bytes: 128
+  - src: task_1
+    dst: task_2
+    bytes: 256

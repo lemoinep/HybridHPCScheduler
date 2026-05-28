@@ -2,6 +2,7 @@
 # HybridHPCScheduler is an experimental framework for the development of an AI-based APIC system.
 # It focuses on intelligent scheduling and resource orchestration in heterogeneous HPC environments.
 
+
 import argparse
 from pathlib import Path
 import pandas as pd
@@ -9,34 +10,47 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-from apic.model import APICModel
+from apic.model import APICModel, create_model
 from apic.env import APICEnv
 
 
-def make_world():
-    model = APICModel()
-    model.build_demo()
-    return model
+def make_world(config_path=None):
+    return create_model(config_path)
 
 
-def make_env(trace_file="output/trace.jsonl"):
-    return APICEnv(make_world(), trace_file=trace_file)
+def make_env(trace_file="output/trace.jsonl", config_path=None):
+    return APICEnv(make_world(config_path), trace_file=trace_file)
 
 
-def run_train(output_dir):
-    env = make_env(trace_file=str(output_dir / "train_trace.jsonl"))
+def run_show_config(config_path):
+    from apic.model import print_config_summary
+    print_config_summary(config_path)
+
+
+def run_compare_configs(config_paths):
+    from apic.model import compare_configs
+    compare_configs(*config_paths)
+
+
+
+
+def run_train(output_dir, config_path=None):
+    env = make_env(trace_file=str(output_dir / "train_trace.jsonl"), config_path=config_path)
     check_env(env, warn=True)
 
-    vec_env = DummyVecEnv([lambda: make_env(trace_file=str(output_dir / "train_vec_trace.jsonl"))])
+    vec_env = DummyVecEnv([lambda: make_env(
+        trace_file=str(output_dir / "train_vec_trace.jsonl"),
+        config_path=config_path
+    )])
     agent = PPO("MultiInputPolicy", vec_env, verbose=1)
     agent.learn(total_timesteps=5000)
     agent.save(str(output_dir / "apic_ppo_segmented"))
     env.close()
 
 
-def run_evaluate(output_dir):
+def run_evaluate(output_dir, config_path=None):
     agent = PPO.load(str(output_dir / "apic_ppo_segmented"))
-    env = make_env(trace_file=str(output_dir / "eval_trace.jsonl"))
+    env = make_env(trace_file=str(output_dir / "eval_trace.jsonl"), config_path=config_path)
 
     obs, info = env.reset()
     total_reward = 0.0
@@ -75,12 +89,15 @@ def run_evaluate(output_dir):
     return summary
 
 
-def run_benchmark(output_dir, n_episodes=10):
+def run_benchmark(output_dir, n_episodes=10, config_path=None):
     agent = PPO.load(str(output_dir / "apic_ppo_segmented"))
     results = []
 
     for ep in range(n_episodes):
-        env = make_env(trace_file=str(output_dir / f"benchmark_trace_ep{ep}.jsonl"))
+        env = make_env(
+            trace_file=str(output_dir / f"benchmark_trace_ep{ep}.jsonl"),
+            config_path=config_path
+        )
         obs, info = env.reset()
         total_reward = 0.0
         terminated = False
@@ -186,22 +203,62 @@ def run_report(output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["train", "evaluate", "benchmark", "plot", "report"])
-    parser.add_argument("--episodes", type=int, default=10)
-    parser.add_argument("--output", type=str, default="output")
+    parser = argparse.ArgumentParser(
+        description="APIC - AI Pipeline Intelligent Coordinator"
+    )
+    parser.add_argument(
+        "mode",
+        choices=["train", "evaluate", "benchmark", "plot", "report"],
+        help="Mode d'exécution"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to YAML configuration file"
+    )
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=10,
+        help="Number of episodes for benchmarking"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="output",
+        help="Output Directory"
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.mode == "train":
-        run_train(output_dir)
+    if args.config:
+        print(f"Using configuration: {args.config}")
+    else:
+        print("Using default demo configuration (build_demo)")
+        
+
+    if args.mode == "show":
+        if not args.config:
+            print("❌ --config required for 'show' mode")
+            return
+        run_show_config(args.config)
+    
+    elif args.mode == "compare":
+        if not args.configs or len(args.configs) < 2:
+            print("❌ --configs <file1> <file2> ... required for 'compare' mode")
+            return
+        run_compare_configs(args.configs)    
+
+    elif args.mode == "train":
+        run_train(output_dir, config_path=args.config)
     elif args.mode == "evaluate":
-        summary = run_evaluate(output_dir)
+        summary = run_evaluate(output_dir, config_path=args.config)
         print(summary)
     elif args.mode == "benchmark":
-        df, stats = run_benchmark(output_dir, n_episodes=args.episodes)
+        df, stats = run_benchmark(output_dir, n_episodes=args.episodes, config_path=args.config)
         print(df.to_string(index=False))
         print(stats.to_string(index=False))
     elif args.mode == "plot":

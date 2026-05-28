@@ -1,0 +1,290 @@
+# Benchmark Configuration – Stress Test and Scientific Evaluation
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 120
+    threads: 64
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+
+  - name: GPU0
+    kind: gpu
+    speed: 1200
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+
+  - name: GPU1
+    kind: gpu
+    speed: 1100
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+
+  - name: NPU0
+    kind: npu
+    speed: 800
+    threads: 128
+    memories:
+      - name: SRAM
+        capacity: 16384
+        latency: 2
+        bandwidth: 1400
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+
+  - name: TPU0
+    kind: tpu
+    speed: 950
+    threads: 128
+    memories:
+      - name: HBM
+        capacity: 32768
+        latency: 3
+        bandwidth: 1500
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+
+  - name: DPU0
+    kind: dpu
+    speed: 250
+    threads: 32
+    memories:
+      - name: SRAM
+        capacity: 8192
+        latency: 2
+        bandwidth: 1000
+      - name: CACHE
+        capacity: 2048
+        latency: 1
+        bandwidth: 1500
+
+topology:
+  # CPU to all
+  - [CPU0, GPU0, 120, 8, pci]
+  - [CPU0, GPU1, 120, 8, pci]
+  - [CPU0, NPU0, 120, 8, pci]
+  - [CPU0, TPU0, 120, 8, pci]
+  - [CPU0, DPU0, 80, 10, pci]
+  
+  # Reverse
+  - [GPU0, CPU0, 120, 8, pci]
+  - [GPU1, CPU0, 120, 8, pci]
+  - [NPU0, CPU0, 120, 8, pci]
+  - [TPU0, CPU0, 120, 8, pci]
+  - [DPU0, CPU0, 80, 10, pci]
+  
+  # GPU interconnect
+  - [GPU0, GPU1, 600, 1, xgmi]
+  - [GPU1, GPU0, 600, 1, xgmi]
+  
+  # Accelerator cross-links
+  - [GPU0, TPU0, 400, 3, xgmi]
+  - [TPU0, GPU0, 400, 3, xgmi]
+  - [GPU1, NPU0, 400, 3, xgmi]
+  - [NPU0, GPU1, 400, 3, xgmi]
+  - [TPU0, NPU0, 300, 5, fabric]
+  - [NPU0, TPU0, 300, 5, fabric]
+
+tasks:
+  # Tâches variées pour stress test
+  - name: ingest
+    compute: 50
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: dpu
+    priority: 10
+    deadline: 3000
+    preemptible: false
+    device: DPU0
+
+  - name: decode_0
+    compute: 120
+    memory: 2048
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 8
+    deadline: 6000
+    preemptible: true
+    device: CPU0
+
+  - name: decode_1
+    compute: 120
+    memory: 2048
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 8
+    deadline: 6000
+    preemptible: true
+    device: CPU0
+
+  - name: infer_gpu_0
+    compute: 600
+    memory: 16384
+    data_in: 1024
+    data_out: 512
+    preferred_kind: gpu
+    priority: 9
+    deadline: 15000
+    preemptible: false
+    device: GPU0
+
+  - name: infer_gpu_1
+    compute: 600
+    memory: 16384
+    data_in: 1024
+    data_out: 512
+    preferred_kind: gpu
+    priority: 9
+    deadline: 15000
+    preemptible: false
+    device: GPU1
+
+  - name: infer_npu
+    compute: 500
+    memory: 12288
+    data_in: 1024
+    data_out: 512
+    preferred_kind: npu
+    priority: 8
+    deadline: 16000
+    preemptible: true
+    device: NPU0
+
+  - name: infer_tpu
+    compute: 550
+    memory: 14336
+    data_in: 1024
+    data_out: 512
+    preferred_kind: tpu
+    priority: 8
+    deadline: 16000
+    preemptible: true
+    device: TPU0
+
+  - name: postprocess_0
+    compute: 100
+    memory: 2048
+    data_in: 512
+    data_out: 256
+    preferred_kind: cpu
+    priority: 7
+    deadline: 20000
+    preemptible: true
+    device: CPU0
+
+  - name: postprocess_1
+    compute: 100
+    memory: 2048
+    data_in: 512
+    data_out: 256
+    preferred_kind: cpu
+    priority: 7
+    deadline: 20000
+    preemptible: true
+    device: CPU0
+
+  - name: fusion
+    compute: 150
+    memory: 4096
+    data_in: 1024
+    data_out: 512
+    preferred_kind: tpu
+    priority: 7
+    deadline: 22000
+    preemptible: true
+    device: TPU0
+
+  - name: compress
+    compute: 80
+    memory: 1024
+    data_in: 512
+    data_out: 128
+    preferred_kind: cpu
+    priority: 6
+    deadline: 25000
+    preemptible: true
+    device: CPU0
+
+  - name: store
+    compute: 40
+    memory: 512
+    data_in: 128
+    data_out: 128
+    preferred_kind: dpu
+    priority: 5
+    deadline: 28000
+    preemptible: true
+    device: DPU0
+
+dependencies:
+  - src: ingest
+    dst: decode_0
+    bytes: 128
+  - src: ingest
+    dst: decode_1
+    bytes: 128
+  - src: decode_0
+    dst: infer_gpu_0
+    bytes: 1024
+  - src: decode_0
+    dst: infer_npu
+    bytes: 1024
+  - src: decode_1
+    dst: infer_gpu_1
+    bytes: 1024
+  - src: decode_1
+    dst: infer_tpu
+    bytes: 1024
+  - src: infer_gpu_0
+    dst: postprocess_0
+    bytes: 512
+  - src: infer_gpu_1
+    dst: postprocess_1
+    bytes: 512
+  - src: infer_npu
+    dst: fusion
+    bytes: 512
+  - src: infer_tpu
+    dst: fusion
+    bytes: 512
+  - src: postprocess_0
+    dst: fusion
+    bytes: 256
+  - src: postprocess_1
+    dst: fusion
+    bytes: 256
+  - src: fusion
+    dst: compress
+    bytes: 512
+  - src: compress
+    dst: store
+    bytes: 128

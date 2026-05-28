@@ -1,0 +1,305 @@
+# Large Cluster Configuration – Realistic HPC Scenario
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 150
+    threads: 128
+    memories:
+      - name: DRAM
+        capacity: 262144
+        latency: 80
+        bandwidth: 250
+      - name: L3
+        capacity: 65536
+        latency: 12
+        bandwidth: 1000
+
+  - name: CPU1
+    kind: cpu
+    speed: 150
+    threads: 128
+    memories:
+      - name: DRAM
+        capacity: 262144
+        latency: 80
+        bandwidth: 250
+      - name: L3
+        capacity: 65536
+        latency: 12
+        bandwidth: 1000
+
+  - name: GPU0
+    kind: gpu
+    speed: 1500
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 81920
+        latency: 3
+        bandwidth: 2000
+      - name: L2
+        capacity: 16384
+        latency: 1
+        bandwidth: 4000
+
+  - name: GPU1
+    kind: gpu
+    speed: 1500
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 81920
+        latency: 3
+        bandwidth: 2000
+      - name: L2
+        capacity: 16384
+        latency: 1
+        bandwidth: 4000
+
+  - name: GPU2
+    kind: gpu
+    speed: 1400
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 81920
+        latency: 3
+        bandwidth: 2000
+      - name: L2
+        capacity: 16384
+        latency: 1
+        bandwidth: 4000
+
+  - name: GPU3
+    kind: gpu
+    speed: 1400
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 81920
+        latency: 3
+        bandwidth: 2000
+      - name: L2
+        capacity: 16384
+        latency: 1
+        bandwidth: 4000
+
+  - name: TPU0
+    kind: tpu
+    speed: 1100
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1800
+      - name: CACHE
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+
+  - name: NPU0
+    kind: npu
+    speed: 900
+    threads: 256
+    memories:
+      - name: SRAM
+        capacity: 32768
+        latency: 2
+        bandwidth: 1600
+      - name: CACHE
+        capacity: 8192
+        latency: 1
+        bandwidth: 2800
+
+topology:
+  # CPU interconnect
+  - [CPU0, CPU1, 150, 5, fabric]
+  - [CPU1, CPU0, 150, 5, fabric]
+  
+  # CPU to GPU (PCIe)
+  - [CPU0, GPU0, 120, 8, pci]
+  - [CPU0, GPU1, 120, 8, pci]
+  - [CPU1, GPU2, 120, 8, pci]
+  - [CPU1, GPU3, 120, 8, pci]
+  
+  # GPU to CPU
+  - [GPU0, CPU0, 120, 8, pci]
+  - [GPU1, CPU0, 120, 8, pci]
+  - [GPU2, CPU1, 120, 8, pci]
+  - [GPU3, CPU1, 120, 8, pci]
+  
+  # GPU interconnect (NVLink/XGMI style)
+  - [GPU0, GPU1, 600, 1, xgmi]
+  - [GPU1, GPU0, 600, 1, xgmi]
+  - [GPU2, GPU3, 600, 1, xgmi]
+  - [GPU3, GPU2, 600, 1, xgmi]
+  - [GPU0, GPU2, 300, 3, xgmi]
+  - [GPU2, GPU0, 300, 3, xgmi]
+  - [GPU1, GPU3, 300, 3, xgmi]
+  - [GPU3, GPU1, 300, 3, xgmi]
+  
+  # Accelerator links
+  - [CPU0, TPU0, 120, 8, pci]
+  - [TPU0, CPU0, 120, 8, pci]
+  - [CPU1, NPU0, 120, 8, pci]
+  - [NPU0, CPU1, 120, 8, pci]
+  - [TPU0, GPU0, 400, 3, xgmi]
+  - [GPU0, TPU0, 400, 3, xgmi]
+  - [NPU0, GPU2, 400, 3, xgmi]
+  - [GPU2, NPU0, 400, 3, xgmi]
+
+tasks:
+  - name: data_load
+    compute: 80
+    memory: 4096
+    data_in: 512
+    data_out: 512
+    preferred_kind: cpu
+    priority: 8
+    deadline: 5000
+    preemptible: true
+    device: CPU0
+
+  - name: preprocess_a
+    compute: 150
+    memory: 8192
+    data_in: 512
+    data_out: 512
+    preferred_kind: cpu
+    priority: 7
+    deadline: 10000
+    preemptible: true
+    device: CPU0
+
+  - name: preprocess_b
+    compute: 150
+    memory: 8192
+    data_in: 512
+    data_out: 512
+    preferred_kind: cpu
+    priority: 7
+    deadline: 10000
+    preemptible: true
+    device: CPU1
+
+  - name: train_step_0
+    compute: 800
+    memory: 32768
+    data_in: 2048
+    data_out: 1024
+    preferred_kind: gpu
+    priority: 10
+    deadline: 25000
+    preemptible: false
+    device: GPU0
+
+  - name: train_step_1
+    compute: 800
+    memory: 32768
+    data_in: 2048
+    data_out: 1024
+    preferred_kind: gpu
+    priority: 10
+    deadline: 25000
+    preemptible: false
+    device: GPU1
+
+  - name: train_step_2
+    compute: 800
+    memory: 32768
+    data_in: 2048
+    data_out: 1024
+    preferred_kind: gpu
+    priority: 10
+    deadline: 25000
+    preemptible: false
+    device: GPU2
+
+  - name: train_step_3
+    compute: 800
+    memory: 32768
+    data_in: 2048
+    data_out: 1024
+    preferred_kind: gpu
+    priority: 10
+    deadline: 25000
+    preemptible: false
+    device: GPU3
+
+  - name: inference_tpu
+    compute: 600
+    memory: 16384
+    data_in: 1024
+    data_out: 512
+    preferred_kind: tpu
+    priority: 9
+    deadline: 20000
+    preemptible: true
+    device: TPU0
+
+  - name: inference_npu
+    compute: 500
+    memory: 12288
+    data_in: 1024
+    data_out: 512
+    preferred_kind: npu
+    priority: 9
+    deadline: 20000
+    preemptible: true
+    device: NPU0
+
+  - name: aggregate
+    compute: 200
+    memory: 8192
+    data_in: 2048
+    data_out: 512
+    preferred_kind: cpu
+    priority: 8
+    deadline: 30000
+    preemptible: true
+    device: CPU1
+
+dependencies:
+  - src: data_load
+    dst: preprocess_a
+    bytes: 512
+  - src: data_load
+    dst: preprocess_b
+    bytes: 512
+  - src: preprocess_a
+    dst: train_step_0
+    bytes: 2048
+  - src: preprocess_a
+    dst: train_step_1
+    bytes: 2048
+  - src: preprocess_b
+    dst: train_step_2
+    bytes: 2048
+  - src: preprocess_b
+    dst: train_step_3
+    bytes: 2048
+  - src: train_step_0
+    dst: aggregate
+    bytes: 1024
+  - src: train_step_1
+    dst: aggregate
+    bytes: 1024
+  - src: train_step_2
+    dst: aggregate
+    bytes: 1024
+  - src: train_step_3
+    dst: aggregate
+    bytes: 1024
+  - src: preprocess_a
+    dst: inference_tpu
+    bytes: 1024
+  - src: preprocess_b
+    dst: inference_npu
+    bytes: 1024
+  - src: inference_tpu
+    dst: aggregate
+    bytes: 512
+  - src: inference_npu
+    dst: aggregate
+    bytes: 512
