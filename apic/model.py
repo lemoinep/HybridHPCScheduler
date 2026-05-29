@@ -9,6 +9,11 @@ import networkx as nx
 import yaml
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
+import networkx as nx
+import numpy as np
 
 
 @dataclass
@@ -426,4 +431,372 @@ def compare_configs(*config_paths):
     
     print("=" * 100)
     print()
+    
+
+
+
+def visualize_config(config_path, output_path="config_visualization.png", dpi=300):
+    config_path = Path(config_path)
+    
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    fig = plt.figure(figsize=(20, 14))
+    gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
+    
+    ax_devices = fig.add_subplot(gs[0, 0])
+    ax_topology = fig.add_subplot(gs[0, 1])
+    ax_tasks = fig.add_subplot(gs[1, :])
+    
+    fig.suptitle(f"HPC Configuration: {config_path.name}", 
+                 fontsize=20, fontweight='bold', y=0.98)
+    
+    _plot_devices_memory(ax_devices, config)
+    
+    _plot_network_topology(ax_topology, config)
+    
+    _plot_task_dependencies(ax_tasks, config)
+    
+    plt.savefig(output_path, dpi=dpi, bbox_inches='tight')
+    plt.close()
+    
+    print(f"✅ Visualization saved to: {output_path}")
+
+
+def _plot_devices_memory(ax, config):
+    ax.set_title("Devices & Memory Hierarchy", fontsize=14, fontweight='bold')
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+    ax.axis('off')
+    
+    devices = config.get('devices', [])
+    if not devices:
+        ax.text(5, 5, "No devices configured", ha='center', va='center')
+        return
+    
+    # Colors by device type
+    device_colors = {
+        'cpu': '#4A90E2',
+        'gpu': '#50C878',
+        'npu': '#F39C12',
+        'tpu': '#9B59B6',
+        'dpu': '#E74C3C',
+    }
+    
+    n_devices = len(devices)
+    cols = min(4, n_devices)
+    rows = (n_devices + cols - 1) // cols
+    
+    x_spacing = 9 / cols
+    y_spacing = 9 / rows
+    
+    for idx, dev in enumerate(devices):
+        row = idx // cols
+        col = idx % cols
+        
+        x = 0.5 + col * x_spacing
+        y = 9.5 - row * y_spacing
+        
+        kind = dev.get('kind', 'cpu')
+        color = device_colors.get(kind, '#95A5A6')
+        
+        # Device's main box
+        box = FancyBboxPatch(
+            (x, y - 0.8), 2.0, 0.8,
+            boxstyle="round,pad=0.05",
+            facecolor=color,
+            edgecolor='black',
+            linewidth=2,
+            alpha=0.7
+        )
+        ax.add_patch(box)
+        
+        # Device Name
+        ax.text(x + 1.0, y - 0.4, dev['name'], 
+                ha='center', va='center', fontsize=10, fontweight='bold', color='white')
+        
+        # Device Speed
+        speed = dev.get('speed', 0)
+        threads = dev.get('threads', 0)
+        ax.text(x + 1.0, y - 0.6, f"{speed} TF | {threads} cores",
+                ha='center', va='center', fontsize=7, color='white')
+        
+        # Memory Hierarchy
+        memories = dev.get('memories', [])
+        mem_y = y - 1.0
+        
+        for mem_idx, mem in enumerate(memories):
+            mem_y -= 0.3
+            mem_name = mem.get('name', 'MEM')
+            mem_cap = mem.get('capacity', 0)
+            mem_bw = mem.get('bandwidth', 0)
+            
+            mem_box = FancyBboxPatch(
+                (x + 0.2, mem_y), 1.6, 0.25,
+                boxstyle="round,pad=0.02",
+                facecolor='white',
+                edgecolor=color,
+                linewidth=1.5,
+                alpha=0.8
+            )
+            ax.add_patch(mem_box)
+            
+            ax.text(x + 1.0, mem_y + 0.125, 
+                    f"{mem_name}: {mem_cap//1024}GB @ {mem_bw}GB/s",
+                    ha='center', va='center', fontsize=6, color='black')
+
+
+def _plot_network_topology(ax, config):
+    ax.set_title("Network Topology", fontsize=14, fontweight='bold')
+    
+    devices = config.get('devices', [])
+    topology = config.get('topology', [])
+    
+    if not devices:
+        ax.text(0.5, 0.5, "No topology configured", ha='center', va='center', 
+                transform=ax.transAxes)
+        ax.axis('off')
+        return
+    
+    # Create a NetworkX graph
+    G = nx.Graph()
+    
+    # Add the devices as nodes
+    device_kinds = {}
+    for dev in devices:
+        G.add_node(dev['name'])
+        device_kinds[dev['name']] = dev.get('kind', 'cpu')
+    
+
+    link_data = {}
+    for link in topology:
+        src, dst = link[0], link[1]
+        bw = link[2] if len(link) > 2 else 100
+        lat = link[3] if len(link) > 3 else 5
+        kind = link[4] if len(link) > 4 else 'fabric'
+        
+        edge = tuple(sorted([src, dst]))
+        if edge not in link_data:
+            G.add_edge(src, dst, bandwidth=bw, latency=lat, kind=kind)
+            link_data[edge] = (bw, lat, kind)
+    
+
+    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+    
+    device_colors = {
+        'cpu': '#4A90E2',
+        'gpu': '#50C878',
+        'npu': '#F39C12',
+        'tpu': '#9B59B6',
+        'dpu': '#E74C3C',
+    }
+    
+    node_colors = [device_colors.get(device_kinds.get(node, 'cpu'), '#95A5A6') 
+                   for node in G.nodes()]
+    
+    # Draw the edges with a thickness proportional to the bandwidth
+    max_bw = max((data['bandwidth'] for _, _, data in G.edges(data=True)), default=1)
+    
+    for (u, v, data) in G.edges(data=True):
+        bw = data['bandwidth']
+        lat = data['latency']
+        kind = data.get('kind', 'fabric')
+        
+        # Thickness proportional to bandwidth
+        width = 0.5 + 5 * (bw / max_bw)
+        
+        # Color according to the type of link
+        link_colors = {
+            'xgmi': '#E74C3C',
+            'pci': '#3498DB',
+            'fabric': '#95A5A6',
+        }
+        color = link_colors.get(kind, '#95A5A6')
+        
+        # Style according to latency (dotted line if high latency)
+        style = 'dashed' if lat > 5 else 'solid'
+        
+        nx.draw_networkx_edges(G, pos, [(u, v)], width=width, 
+                               edge_color=color, style=style, alpha=0.6, ax=ax)
+    
+    # Draw the knots
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, 
+                           node_size=1500, alpha=0.9, ax=ax)
+    
+    # Dessiner les labels
+    nx.draw_networkx_labels(G, pos, font_size=9, font_weight='bold', 
+                            font_color='white', ax=ax)
+    
+    # Legend for link types
+    legend_elements = [
+        mpatches.Patch(facecolor='#E74C3C', label='XGMI (high-speed)'),
+        mpatches.Patch(facecolor='#3498DB', label='PCIe'),
+        mpatches.Patch(facecolor='#95A5A6', label='Fabric'),
+    ]
+    ax.legend(handles=legend_elements, loc='upper right', fontsize=8)
+    
+    ax.axis('off')
+    
+    
+def _plot_task_dependencies(ax, config):
+    """Visualise le DAG des tâches avec dépendances."""
+    ax.set_title("Task Dependency Graph (DAG)", fontsize=14, fontweight='bold')
+    
+    tasks = config.get('tasks', [])
+    dependencies = config.get('dependencies', [])
+    
+    if not tasks:
+        ax.text(0.5, 0.5, "No tasks configured", ha='center', va='center',
+                transform=ax.transAxes)
+        ax.axis('off')
+        return
+    
+    G = nx.DiGraph()
+    
+    # Add tasks as nodes with attributes
+    task_info = {}
+    for task in tasks:
+        name = task['name']
+        G.add_node(name)
+        task_info[name] = {
+            'compute': task.get('compute', 0),
+            'memory': task.get('memory', 0),
+            'priority': task.get('priority', 5),
+            'deadline': task.get('deadline', 0),
+            'kind': task.get('preferred_kind', 'cpu'),
+        }
+    
+    # Add dependencies
+    dep_weights = {}
+    for dep in dependencies:
+        src = dep['src']
+        dst = dep['dst']
+        bytes_val = dep.get('bytes', 0)
+        G.add_edge(src, dst, weight=bytes_val)
+        dep_weights[(src, dst)] = bytes_val
+    
+    # Hierarchical Layout
+    try:
+        pos = nx.spring_layout(G, k=3, iterations=50, seed=42)
+    except:
+        pos = nx.spring_layout(G, seed=42)
+    
+    # Node colors according to priority
+    priorities = [task_info[node]['priority'] for node in G.nodes()]
+    
+    # Draw edges with weight labels
+    max_weight = max(dep_weights.values(), default=1)
+    
+    for (u, v) in G.edges():
+        weight = dep_weights.get((u, v), 0)
+        width = 0.5 + 3 * (weight / max_weight)
+        
+        nx.draw_networkx_edges(G, pos, [(u, v)], width=width,
+                               edge_color='#34495E', alpha=0.6,
+                               arrowsize=20, arrowstyle='->', ax=ax)
+        
+        # Weight label on the edge
+        edge_x = (pos[u][0] + pos[v][0]) / 2
+        edge_y = (pos[u][1] + pos[v][1]) / 2
+        ax.text(edge_x, edge_y, f"{weight}MB", fontsize=7,
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+    
+    # Draw the nodes with color according to priority
+    nodes = nx.draw_networkx_nodes(G, pos, node_color=priorities,
+                                    cmap=plt.cm.RdYlGn_r, vmin=0, vmax=10,
+                                    node_size=2000, alpha=0.9, ax=ax)
+    
+    if nodes is not None:
+        # Add an outline to high-priority tasks
+        high_priority_nodes = [node for node in G.nodes() 
+                               if task_info[node]['priority'] >= 8]
+        if high_priority_nodes:
+            high_priority_pos = {k: v for k, v in pos.items() if k in high_priority_nodes}
+            nx.draw_networkx_nodes(G, high_priority_pos, 
+                                   nodelist=high_priority_nodes,
+                                   node_color='none',
+                                   edgecolors='red',
+                                   linewidths=3,
+                                   node_size=2200,
+                                   ax=ax)
+    
+    
+    # Node labels with info
+    labels = {}
+    for node in G.nodes():
+        info = task_info[node]
+        labels[node] = f"{node}\n{info['compute']}c | {info['memory']//1024}GB\nP{info['priority']}"
+    
+    nx.draw_networkx_labels(G, pos, labels, font_size=7, font_weight='bold', ax=ax)
+    
+    # Colorbar for priority (utilise 'nodes' pour garantir la cohérence)
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.RdYlGn_r, 
+                               norm=plt.Normalize(vmin=0, vmax=10))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, orientation='horizontal', pad=0.05, aspect=30)
+    cbar.set_label('Task Priority', fontsize=10)
+    
+    device_colors = {
+        'cpu': '#4A90E2',
+        'gpu': '#50C878',
+        'npu': '#F39C12',
+        'tpu': '#9B59B6',
+        'dpu': '#E74C3C',
+    }
+    
+    # Find the types of devices present
+    kinds_present = set(task_info[node]['kind'] for node in G.nodes())
+    
+    legend_elements = []
+    for kind in sorted(kinds_present):
+        if kind in device_colors:
+            legend_elements.append(
+                mpatches.Patch(facecolor=device_colors[kind], 
+                              label=f'{kind.upper()} tasks',
+                              alpha=0.7)
+            )
+    
+    if legend_elements:
+        ax.legend(handles=legend_elements, loc='upper left', fontsize=8, 
+                 title='Device')
+    
+    # Add DAG statistics in a corner
+    num_tasks = len(G.nodes())
+    num_deps = len(G.edges())
+    total_data = sum(dep_weights.values())
+    
+    stats_text = f"Tasks: {num_tasks}\nDeps: {num_deps}\nData: {total_data}MB"
+    ax.text(0.98, 0.02, stats_text, transform=ax.transAxes,
+            fontsize=9, verticalalignment='bottom', horizontalalignment='right',
+            bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.8))
+    
+    ax.axis('off')
+
+
+
+def visualize_all_configs(config_dir="configs", output_dir="visualizations"):
+    config_dir = Path(config_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    yaml_files = list(config_dir.glob("*.yaml")) + list(config_dir.glob("*.yml"))
+    
+    if not yaml_files:
+        print(f"❌ No YAML files found in {config_dir}")
+        return
+    
+    print(f"📊 Generating visualizations for {len(yaml_files)} configurations...")
+    
+    for yaml_file in yaml_files:
+        output_file = output_dir / f"{yaml_file.stem}_visualization.png"
+        try:
+            visualize_config(yaml_file, output_file)
+            print(f"  ✅ {yaml_file.name} → {output_file.name}")
+        except Exception as e:
+            print(f"  ❌ {yaml_file.name}: {e}")
+    
+    print(f"\n✅ All visualizations saved to {output_dir}/")
     

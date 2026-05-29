@@ -32,6 +32,14 @@ def run_compare_configs(config_paths):
     compare_configs(*config_paths)
 
 
+def run_visualize(config_path, output_path):
+    from apic.model import visualize_config
+    visualize_config(config_path, output_path)
+
+
+def run_visualize_all(config_dir, output_dir):
+    from apic.model import visualize_all_configs
+    visualize_all_configs(config_dir, output_dir)
 
 
 def run_train(output_dir, config_path=None):
@@ -208,7 +216,8 @@ def main():
     )
     parser.add_argument(
         "mode",
-        choices=["train", "evaluate", "benchmark", "plot", "report"],
+        choices=["train", "evaluate", "benchmark", "plot", "report", 
+                 "show", "compare", "visualize", "visualize-all"],
         help="Mode d'exécution"
     )
     parser.add_argument(
@@ -229,6 +238,29 @@ def main():
         default="output",
         help="Output Directory"
     )
+    
+    parser.add_argument(
+       "--configs",
+       nargs="+",
+       default=None,
+       help="List of configurations for comparison (compare mode)"
+   )
+    
+    parser.add_argument(
+       "--config_dir",
+       type=str,
+       default="configs",
+       help="Folder containing the configurations (visualize-all mode)"
+   )
+    
+    parser.add_argument(
+        "--viz_output", 
+        type=str,
+        default=None,
+        help="Output path for visualization"
+   )
+    
+    
     args = parser.parse_args()
 
     output_dir = Path(args.output)
@@ -239,8 +271,21 @@ def main():
     else:
         print("Using default demo configuration (build_demo)")
         
+        
+    if args.mode == "visualize":
+        if not args.config:
+            print("❌ --config required for 'visualize' mode")
+            return
+        default_output = output_dir / f"{Path(args.config).stem}_visualization.png"
+        output_path = getattr(args, 'viz_output', None) or str(default_output)
+        run_visualize(args.config, output_path)
+    
+    elif args.mode == "visualize-all":
+        default_viz_dir = output_dir / "visualizations"
+        viz_output_dir = getattr(args, 'viz_output', None) or str(default_viz_dir)
+        run_visualize_all(args.config_dir, viz_output_dir)
 
-    if args.mode == "show":
+    elif args.mode == "show":
         if not args.config:
             print("❌ --config required for 'show' mode")
             return
@@ -254,15 +299,19 @@ def main():
 
     elif args.mode == "train":
         run_train(output_dir, config_path=args.config)
+        
     elif args.mode == "evaluate":
         summary = run_evaluate(output_dir, config_path=args.config)
         print(summary)
+        
     elif args.mode == "benchmark":
         df, stats = run_benchmark(output_dir, n_episodes=args.episodes, config_path=args.config)
         print(df.to_string(index=False))
         print(stats.to_string(index=False))
+        
     elif args.mode == "plot":
         run_plot(output_dir)
+        
     elif args.mode == "report":
         run_report(output_dir)
 
