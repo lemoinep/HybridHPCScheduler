@@ -259,6 +259,15 @@ This graph separates three dimensions of the model: the **devices**, the **memor
 
 * **DPU (Data Processing Unit)**: A specialized processor that offloads data-intensive tasks like networking, storage, and security from the CPU, enabling efficient data center operations. It handles data movement, compression, encryption, and network functions, allowing CPUs to focus on application logic.
 
+## Viewing Other Benchmarks
+
+The various case study models are located in the `configs` directory. The HPC configurations are described in the `.yaml` files. The program allows you to visualize the different models; you can view some of these visualizations below.
+
+<img src="Images/benchmark_visualization.png" width="100%" />
+<img src="Images/demo_visualization.png" width="100%" />
+<img src="Images/large_cluster_visualization.png" width="100%" />
+
+*Note: I will create a 3D visualization later to navigate a complex HPC environment. I will give some thought to the design.*
 
 ## For more information
 
