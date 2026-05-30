@@ -41,6 +41,9 @@ def run_visualize_all(config_dir, output_dir):
     from apic.model import visualize_all_configs
     visualize_all_configs(config_dir, output_dir)
 
+def run_guide(config_path, output_path):
+    from apic.model import generate_beginner_guide
+    generate_beginner_guide(config_path, output_path)
 
 def run_train(output_dir, config_path=None):
     env = make_env(trace_file=str(output_dir / "train_trace.jsonl"), config_path=config_path)
@@ -217,7 +220,7 @@ def main():
     parser.add_argument(
         "mode",
         choices=["train", "evaluate", "benchmark", "plot", "report", 
-                 "show", "compare", "visualize", "visualize-all"],
+                 "show", "compare", "visualize", "visualize-all", "guide"],
         help="Mode d'exécution"
     )
     parser.add_argument(
@@ -284,6 +287,14 @@ def main():
         default_viz_dir = output_dir / "visualizations"
         viz_output_dir = getattr(args, 'viz_output', None) or str(default_viz_dir)
         run_visualize_all(args.config_dir, viz_output_dir)
+        
+    elif args.mode == "guide":
+        if not args.config:
+            print("❌ --config required for 'guide' mode")
+            return
+        default_output = output_dir / f"{Path(args.config).stem}_guide.txt"
+        guide_output = args.viz_output or str(default_output)
+        run_guide(args.config, guide_output)
 
     elif args.mode == "show":
         if not args.config:

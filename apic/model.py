@@ -800,3 +800,352 @@ def visualize_all_configs(config_dir="configs", output_dir="visualizations"):
     
     print(f"\n✅ All visualizations saved to {output_dir}/")
     
+
+def generate_beginner_guide(config_path, output_path="beginner_guide.txt"):
+    config_path = Path(config_path)
+    
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    
+    with open(config_path, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    
+    devices = config.get('devices', [])
+    topology = config.get('topology', [])
+    tasks = config.get('tasks', [])
+    dependencies = config.get('dependencies', [])
+    
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write("=" * 80 + "\n")
+        f.write("BEGINNER'S GUIDE TO HPC CONFIGURATION\n")
+        f.write("BY Dr. Patrick Lemoine\n")
+        f.write(f"Configuration: {config_path.name}\n")
+        f.write("=" * 80 + "\n\n")
+        
+        # Introduction
+        f.write("📖 WHAT IS THIS?\n")
+        f.write("-" * 80 + "\n")
+        f.write("This configuration describes a High-Performance Computing (HPC) system.\n")
+        f.write("It defines:\n")
+        f.write("  • Hardware devices (CPUs, GPUs, accelerators)\n")
+        f.write("  • Network connections between devices\n")
+        f.write("  • Tasks to be executed\n")
+        f.write("  • Dependencies between tasks\n\n")
+        
+        # Devices explanation
+        f.write("=" * 80 + "\n")
+        f.write("🖥️  DEVICES (HARDWARE COMPONENTS)\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write(f"Total devices: {len(devices)}\n\n")
+        
+        if devices:
+            f.write("WHAT ARE DEVICES?\n")
+            f.write("-" * 80 + "\n")
+            f.write("Devices are processing units that execute computations.\n")
+            f.write("Different types are optimized for different workloads:\n\n")
+            
+            f.write("  • CPU (Central Processing Unit):\n")
+            f.write("    - General-purpose processor\n")
+            f.write("    - Good for: Sequential tasks, system control, data preprocessing\n")
+            f.write("    - Typical speed: 100-200 TFLOPS\n\n")
+            
+            f.write("  • GPU (Graphics Processing Unit):\n")
+            f.write("    - Massively parallel processor\n")
+            f.write("    - Good for: Deep learning training, matrix operations, simulations\n")
+            f.write("    - Typical speed: 1000-2000 TFLOPS\n\n")
+            
+            f.write("  • NPU (Neural Processing Unit):\n")
+            f.write("    - Specialized for AI inference\n")
+            f.write("    - Good for: Real-time AI predictions, edge computing\n")
+            f.write("    - Typical speed: 500-1000 TFLOPS\n\n")
+            
+            f.write("  • TPU (Tensor Processing Unit):\n")
+            f.write("    - Optimized for tensor operations\n")
+            f.write("    - Good for: Large-scale ML training, tensor computations\n")
+            f.write("    - Typical speed: 800-1200 TFLOPS\n\n")
+            
+            f.write("  • DPU (Data Processing Unit):\n")
+            f.write("    - Specialized for data movement and I/O\n")
+            f.write("    - Good for: Network processing, storage acceleration\n")
+            f.write("    - Typical speed: 200-300 TFLOPS\n\n")
+            
+            f.write("\nYOUR DEVICES:\n")
+            f.write("-" * 80 + "\n")
+            
+            device_by_kind = {}
+            for dev in devices:
+                kind = dev.get('kind', 'unknown')
+                if kind not in device_by_kind:
+                    device_by_kind[kind] = []
+                device_by_kind[kind].append(dev)
+            
+            for kind, devs in sorted(device_by_kind.items()):
+                f.write(f"\n{kind.upper()} ({len(devs)} device{'s' if len(devs) > 1 else ''}):\n")
+                for dev in devs:
+                    f.write(f"  • {dev['name']}:\n")
+                    f.write(f"    - Speed: {dev.get('speed', 0)} TFLOPS\n")
+                    f.write(f"    - Threads: {dev.get('threads', 0)} parallel execution units\n")
+                    
+                    memories = dev.get('memories', [])
+                    if memories:
+                        f.write(f"    - Memory hierarchy:\n")
+                        for mem in memories:
+                            cap_gb = mem.get('capacity', 0) / 1024
+                            f.write(f"      * {mem.get('name', 'MEM')}: {cap_gb:.1f} GB @ {mem.get('bandwidth', 0)} GB/s\n")
+                            f.write(f"        (Lower latency = faster access)\n")
+        
+        # Topology explanation
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("🔗 NETWORK TOPOLOGY (DEVICE CONNECTIONS)\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("WHAT IS TOPOLOGY?\n")
+        f.write("-" * 80 + "\n")
+        f.write("Topology describes how devices are connected and communicate.\n")
+        f.write("Key metrics:\n\n")
+        
+        f.write("  • Bandwidth (GB/s):\n")
+        f.write("    - How much data can be transferred per second\n")
+        f.write("    - Higher = faster data movement\n")
+        f.write("    - Example: 100 GB/s can transfer 100 GB in 1 second\n\n")
+        
+        f.write("  • Latency (nanoseconds):\n")
+        f.write("    - Time delay before transfer begins\n")
+        f.write("    - Lower = faster response\n")
+        f.write("    - Example: 5 ns latency means 5 billionths of a second delay\n\n")
+        
+        f.write("Connection types:\n")
+        f.write("  • XGMI (high-speed GPU interconnect): 500-2000 GB/s, 1-3 ns latency\n")
+        f.write("  • PCIe (standard device connection): 50-150 GB/s, 5-10 ns latency\n")
+        f.write("  • Fabric (network fabric): 100-500 GB/s, 3-8 ns latency\n\n")
+        
+        if topology:
+            f.write(f"YOUR NETWORK ({len(topology)} connections):\n")
+            f.write("-" * 80 + "\n")
+            
+            # Group by connection type
+            links_by_kind = {}
+            for link in topology:
+                kind = link[4] if len(link) > 4 else 'unknown'
+                if kind not in links_by_kind:
+                    links_by_kind[kind] = []
+                links_by_kind[kind].append(link)
+            
+            for kind, links in sorted(links_by_kind.items()):
+                f.write(f"\n{kind.upper()} connections ({len(links)}):\n")
+                # Show statistics
+                bandwidths = [l[2] for l in links if len(l) > 2]
+                latencies = [l[3] for l in links if len(l) > 3]
+                
+                if bandwidths:
+                    avg_bw = sum(bandwidths) / len(bandwidths)
+                    f.write(f"  Average bandwidth: {avg_bw:.1f} GB/s\n")
+                if latencies:
+                    avg_lat = sum(latencies) / len(latencies)
+                    f.write(f"  Average latency: {avg_lat:.1f} ns\n")
+                
+                f.write(f"  Example connections:\n")
+                for link in links[:3]:
+                    src, dst = link[0], link[1]
+                    bw = link[2] if len(link) > 2 else 0
+                    lat = link[3] if len(link) > 3 else 0
+                    f.write(f"    {src} ↔ {dst}: {bw} GB/s, {lat} ns latency\n")
+                
+                if len(links) > 3:
+                    f.write(f"    ... and {len(links) - 3} more\n")
+        
+        # Tasks explanation
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("📋 TASKS (COMPUTATIONAL WORKLOADS)\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("WHAT ARE TASKS?\n")
+        f.write("-" * 80 + "\n")
+        f.write("Tasks are units of work to be executed on devices.\n")
+        f.write("Each task has:\n\n")
+        
+        f.write("  • Compute (TFLOPS):\n")
+        f.write("    - Amount of computation required\n")
+        f.write("    - Higher = more processing time needed\n\n")
+        
+        f.write("  • Memory (MB):\n")
+        f.write("    - Amount of RAM/memory required\n")
+        f.write("    - Task won't run if device doesn't have enough memory\n\n")
+        
+        f.write("  • Priority (1-10):\n")
+        f.write("    - Importance of the task\n")
+        f.write("    - 10 = highest priority (most urgent)\n")
+        f.write("    - 1 = lowest priority\n\n")
+        
+        f.write("  • Deadline (milliseconds):\n")
+        f.write("    - Time by which task must complete\n")
+        f.write("    - Exceeding deadline may cause system failure or poor performance\n\n")
+        
+        f.write("  • Preferred device kind:\n")
+        f.write("    - Optimal device type for this task\n")
+        f.write("    - Scheduler tries to place task on preferred device\n\n")
+        
+        if tasks:
+            f.write(f"YOUR TASKS ({len(tasks)} total):\n")
+            f.write("-" * 80 + "\n\n")
+            
+            total_compute = sum(t.get('compute', 0) for t in tasks)
+            total_memory = sum(t.get('memory', 0) for t in tasks)
+            avg_priority = sum(t.get('priority', 0) for t in tasks) / len(tasks)
+            avg_deadline = sum(t.get('deadline', 0) for t in tasks) / len(tasks)
+            
+            f.write("OVERALL STATISTICS:\n")
+            f.write(f"  Total compute required: {total_compute} TFLOPS\n")
+            f.write(f"  Total memory required: {total_memory / 1024:.1f} GB\n")
+            f.write(f"  Average priority: {avg_priority:.1f}/10\n")
+            f.write(f"  Average deadline: {avg_deadline:.0f} ms\n\n")
+            
+            # Group by preferred device
+            tasks_by_kind = {}
+            for task in tasks:
+                kind = task.get('preferred_kind', 'any')
+                if kind not in tasks_by_kind:
+                    tasks_by_kind[kind] = []
+                tasks_by_kind[kind].append(task)
+            
+            for kind, task_list in sorted(tasks_by_kind.items()):
+                f.write(f"\nTasks preferring {kind.upper()} ({len(task_list)}):\n")
+                for task in task_list:
+                    f.write(f"  • {task['name']}:\n")
+                    f.write(f"    - Compute: {task.get('compute', 0)} TFLOPS\n")
+                    f.write(f"    - Memory: {task.get('memory', 0) / 1024:.2f} GB\n")
+                    f.write(f"    - Priority: {task.get('priority', 0)}/10\n")
+                    f.write(f"    - Deadline: {task.get('deadline', 0)} ms\n")
+                    
+                    # Interpretation
+                    priority = task.get('priority', 0)
+                    if priority >= 8:
+                        f.write(f"    → HIGH PRIORITY: Must complete quickly\n")
+                    elif priority <= 3:
+                        f.write(f"    → LOW PRIORITY: Can be delayed if needed\n")
+        
+        # Dependencies explanation
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("🔀 TASK DEPENDENCIES (EXECUTION ORDER)\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("WHAT ARE DEPENDENCIES?\n")
+        f.write("-" * 80 + "\n")
+        f.write("Dependencies define the order in which tasks must execute.\n")
+        f.write("A dependency 'A → B' means:\n")
+        f.write("  • Task A must complete BEFORE task B can start\n")
+        f.write("  • Data produced by A is needed by B\n")
+        f.write("  • The amount of data transferred is specified in MB\n\n")
+        
+        if dependencies:
+            f.write(f"YOUR DEPENDENCIES ({len(dependencies)}):\n")
+            f.write("-" * 80 + "\n\n")
+            
+            total_data_transfer = sum(d.get('bytes', 0) for d in dependencies)
+            f.write(f"Total data to transfer: {total_data_transfer} MB\n\n")
+            
+            f.write("Dependency chain:\n")
+            for dep in dependencies:
+                src = dep['src']
+                dst = dep['dst']
+                data = dep.get('bytes', 0)
+                f.write(f"  {src} → {dst} ({data} MB of data)\n")
+            
+            f.write("\nIMPLICATIONS:\n")
+            f.write("  • Tasks cannot run in parallel if one depends on another\n")
+            f.write("  • Large data transfers can become bottlenecks\n")
+            f.write("  • Network bandwidth affects overall completion time\n")
+        
+        # How to use this
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("🎯 HOW TO USE THIS CONFIGURATION\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("1. TRAINING THE AI SCHEDULER:\n")
+        f.write("   python main.py train --config configs/your_config.yaml\n")
+        f.write("   → The AI learns to assign tasks to devices optimally\n\n")
+        
+        f.write("2. EVALUATING PERFORMANCE:\n")
+        f.write("   python main.py evaluate --config configs/your_config.yaml\n")
+        f.write("   → Tests how well the AI scheduler performs\n\n")
+        
+        f.write("3. BENCHMARKING:\n")
+        f.write("   python main.py benchmark --config configs/your_config.yaml --episodes 20\n")
+        f.write("   → Runs multiple tests to get average performance\n\n")
+        
+        f.write("4. VISUALIZING THE SYSTEM:\n")
+        f.write("   python main.py visualize --config configs/your_config.yaml\n")
+        f.write("   → Creates a diagram showing devices, network, and tasks\n\n")
+        
+        f.write("5. COMPARING CONFIGURATIONS:\n")
+        f.write("   python main.py compare --configs config1.yaml config2.yaml\n")
+        f.write("   → Shows differences between multiple configurations\n\n")
+        
+        # Understanding results
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("📊 UNDERSTANDING THE RESULTS\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("After running evaluation or benchmark, you'll see metrics:\n\n")
+        
+        f.write("• total_reward:\n")
+        f.write("  - Overall performance score (higher is better)\n")
+        f.write("  - Combines efficiency, task completion, and deadline adherence\n\n")
+        
+        f.write("• late_tasks:\n")
+        f.write("  - Number of tasks that missed their deadline\n")
+        f.write("  - Lower is better (0 = all tasks completed on time)\n\n")
+        
+        f.write("• congestion:\n")
+        f.write("  - How many devices are overloaded\n")
+        f.write("  - Lower is better (indicates good load balancing)\n\n")
+        
+        f.write("• migrations:\n")
+        f.write("  - Number of times tasks were moved between devices\n")
+        f.write("  - Too many = inefficient (wastes time on data transfer)\n")
+        f.write("  - Too few = inflexible (can't adapt to changes)\n\n")
+        
+        f.write("• segments:\n")
+        f.write("  - Number of task execution segments\n")
+        f.write("  - Shows how work is divided across time and devices\n\n")
+        
+        # Tips for beginners
+        f.write("\n" + "=" * 80 + "\n")
+        f.write("💡 TIPS FOR BEGINNERS\n")
+        f.write("=" * 80 + "\n\n")
+        
+        f.write("1. START SMALL:\n")
+        f.write("   - Begin with small_cluster.yaml (2 devices, 3 tasks)\n")
+        f.write("   - Understand the basics before moving to complex configs\n\n")
+        
+        f.write("2. CHECK DEVICE CAPACITY:\n")
+        f.write("   - Make sure devices have enough memory for tasks\n")
+        f.write("   - Sum of task memory should not exceed device memory\n\n")
+        
+        f.write("3. BALANCE PRIORITIES:\n")
+        f.write("   - Not all tasks should be priority 10\n")
+        f.write("   - Mix of priorities allows flexible scheduling\n\n")
+        
+        f.write("4. REALISTIC DEADLINES:\n")
+        f.write("   - Set deadlines based on task compute requirements\n")
+        f.write("   - Too tight = many late tasks\n")
+        f.write("   - Too loose = inefficient resource use\n\n")
+        
+        f.write("5. NETWORK MATTERS:\n")
+        f.write("   - Fast connections (XGMI) allow efficient task migration\n")
+        f.write("   - Slow connections create bottlenecks\n\n")
+        
+        f.write("6. MONITOR METRICS:\n")
+        f.write("   - Watch late_tasks and congestion closely\n")
+        f.write("   - These indicate scheduling quality\n\n")
+        
+        f.write("7. ITERATE:\n")
+        f.write("   - Try different configurations\n")
+        f.write("   - Compare results to find optimal setup\n\n")
+        
+        f.write("=" * 80 + "\n")
+        f.write("END OF GUIDE\n")
+        f.write("=" * 80 + "\n")
+    
+    print(f"✅ Beginner's guide saved to: {output_path}")
