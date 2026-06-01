@@ -271,30 +271,20 @@ The various case study models are located in the `configs` directory. The HPC co
 <img src="Images/benchmark_visualization.png" width="100%" />
 <img src="Images/demo_visualization.png" width="100%" />
 <img src="Images/large_cluster_visualization.png" width="100%" />
-
-*Note: 
+ 
+ ---
+**Note**: 
 - I have added a guide to the beginner's program on HPC configuration.
-- Future Development: I will create a 3D visualization later to navigate a complex HPC environment. I will give some thought to the design.*
+- Future Development: I will create a 3D visualization later to navigate a complex HPC environment. I will give some thought to the design.
 
 ## For more information
 
 <img src="Images/P0001.jpg" width="100%" />
 
 
-### Detail information Level 1
+### Detail information
 
-<img src="Images/Z20260521_000001.jpg" width="100%" />
-<img src="Images/Z20260521_000002.jpg" width="100%" />
-<img src="Images/Z20260521_000003.jpg" width="100%" />
-<img src="Images/Z20260521_000004.jpg" width="100%" />
-<img src="Images/Z20260521_000005.jpg" width="100%" />
-<img src="Images/Z20260521_000006.jpg" width="100%" />
-<img src="Images/Z20260521_000007.jpg" width="100%" />
-<img src="Images/Z20260521_000008.jpg" width="100%" />
-<img src="Images/Z20260521_000009.jpg" width="100%" />
-<img src="Images/Z20260521_000010.jpg" width="100%" />
-<img src="Images/Z20260521_000011.jpg" width="100%" />
-<img src="Images/Z20260521_000012.jpg" width="100%" />
+* [Link for Hybrid HPC Scheduler](docs/InformationLevel1.md)
 
 ---
 
