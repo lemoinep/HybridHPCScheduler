@@ -284,7 +284,9 @@ The various case study models are located in the `configs` directory. The HPC co
 
 ### Detail information
 
-* [Link for Hybrid HPC Scheduler](docs/InformationLevel1.md)
+* [Hybrid HPC Scheduler](docs/InformationLevel1.md)
+
+* [The Synergy and Trade-offs Between CP-SAT and Reinforcement Learning](docs/InformationLevel2.md)
 
 ---
 

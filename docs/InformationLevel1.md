@@ -1,8 +1,7 @@
 
+# **Hybrid HPC Scheduler**
 
-
-
-### Detail information Level 1
+*Next-Generation Resource Orchestration for Heterogeneous Enterogeneous Environments*
 
 <img src="../Images/Z20260521_000001.jpg" width="100%" />
 <img src="../Images/Z20260521_000002.jpg" width="100%" />
