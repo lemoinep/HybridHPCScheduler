@@ -31,6 +31,7 @@ class Device:
     speed: float
     threads: int
     memories: List[MemoryLevel]
+    online: bool = True 
 
 
 @dataclass
@@ -92,6 +93,24 @@ class APICModel:
 
     def add_dep(self, src, dst, bytes_mb):
         self.deps.append(Dep(src, dst, bytes_mb))
+
+    def set_device_state(self, name: str, online: bool):
+        if name not in self.devices:
+            raise KeyError(f"Unknown device: {name}")
+        self.devices[name].online = online
+
+    def fail_device(self, name: str):
+        self.set_device_state(name, False)
+
+    def recover_device(self, name: str):
+        self.set_device_state(name, True)
+
+    def get_online_devices(self, kind: str | None = None):
+        return [
+            d for d in self.devices.values()
+            if d.online and (kind is None or d.kind == kind)
+        ]
+
 
     def build_demo(self):
         self.add_device("CPU0", "cpu", 120, 64, [MemoryLevel("DRAM", 131072, 80, 200), MemoryLevel("L3", 32768, 12, 800)])

@@ -31,6 +31,8 @@ class APICEnv(gym.Env):
 
         self.device_names = list(self.model.devices.keys())
         self.task_names = list(self.model.tasks.keys())
+        
+        self._device_failure_pending = False
 
         self.action_space = spaces.MultiDiscrete([
             6,
@@ -55,6 +57,9 @@ class APICEnv(gym.Env):
         if getattr(self, "_trace", None):
             self._trace.close()
 
+    def _refresh_device_names(self):
+        self.device_names = [d.name for d in self.model.get_online_devices()]
+
     def _log(self, rec):
         self._trace.write(json.dumps(rec) + "\n")
         self._trace.flush()
@@ -72,7 +77,8 @@ class APICEnv(gym.Env):
             "resumed": bool(seg.resumed),
             "action_type": int(action_type),
         })
-
+        
+    
     def _observe(self, replanned=0):
         if self.schedule is None:
             return {
@@ -97,6 +103,45 @@ class APICEnv(gym.Env):
             "congestion": np.array([congestion], dtype=np.int64),
             "replanned": np.array([replanned], dtype=np.int64),
         }
+    
+    
+    def fail_device(self, name: str):
+        if name not in self.model.devices:
+            print(f"[FAIL_DEVICE] Unknown device: {name}")
+            return
+    
+        self.model.fail_device(name)
+        self._refresh_device_names()
+    
+        affected = [
+            seg for seg in self.segments_log
+            if seg.get("device") == name and seg.get("end", self.now) > self.now
+        ]
+    
+        # Forcer une replanification au prochain step
+        self._device_failure_pending = True
+        self.solve_failed = False
+    
+        self._log({
+            "event": "device_failure",
+            "time": int(self.now),
+            "device": name,
+            "affected_segments": len(affected),
+        })
+
+    def recover_device(self, name: str):
+        if name not in self.model.devices:
+            print(f"[RECOVER_DEVICE] Unknown device: {name}")
+            return
+    
+        self.model.recover_device(name)
+        self._refresh_device_names()
+    
+        self._log({
+            "event": "device_recovery",
+            "time": int(self.now),
+            "device": name,
+        })
 
 
     def reset(self, seed=None, options=None):
@@ -107,6 +152,7 @@ class APICEnv(gym.Env):
         self.segment_states = {}
         self.solve_failed = False
         self.segment_counter = 0
+        self._device_failure_pending = False
         
         self.episode_offset = int(np.random.randint(0, 3))
         self.random_priority_shift = int(np.random.randint(-1, 2))
@@ -150,6 +196,10 @@ class APICEnv(gym.Env):
         if self.schedule is None:
             return 0, 0.0, 0.0
     
+        self._refresh_device_names()
+        if not self.device_names:
+            return 0, 0.0, 0.0
+ 
         action = np.asarray(action).astype(int).tolist()
         action_type = int(action[0])
     
@@ -224,8 +274,11 @@ class APICEnv(gym.Env):
         self.now += self.tick_ms
     
         t1 = time.perf_counter()
+        
+        if getattr(self, "_device_failure_pending", False):
+           replanned = 1
+           self._device_failure_pending = False
     
-        # Vérifier si replanification nécessaire
         if replanned == 1 and not getattr(self, "solve_failed", False):
             self.schedule = self.scheduler.solve_window(horizon=self.episode_limit)
             
