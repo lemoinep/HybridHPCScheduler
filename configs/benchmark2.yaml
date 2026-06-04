@@ -1,0 +1,274 @@
+# Benchmark configuration - designed to create contention and trade-offs
+
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 120
+    threads: 64
+    memories:
+      - name: DRAM
+        capacity: 65536    # 64 GB
+        latency: 80
+        bandwidth: 150
+
+  - name: CPU1
+    kind: cpu
+    speed: 120
+    threads: 64
+    memories:
+      - name: DRAM
+        capacity: 65536
+        latency: 80
+        bandwidth: 150
+
+  - name: GPU0
+    kind: gpu
+    speed: 1500
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 32768    # 32 GB
+        latency: 3
+        bandwidth: 2000
+
+  - name: GPU1
+    kind: gpu
+    speed: 1400
+    threads: 512
+    memories:
+      - name: HBM
+        capacity: 32768
+        latency: 3
+        bandwidth: 1800
+
+  - name: NPU0
+    kind: npu
+    speed: 900
+    threads: 256
+    memories:
+      - name: SRAM
+        capacity: 16384    # 16 GB
+        latency: 2
+        bandwidth: 1200
+
+  - name: DPU0
+    kind: dpu
+    speed: 300
+    threads: 32
+    memories:
+      - name: SRAM
+        capacity: 8192     # 8 GB
+        latency: 2
+        bandwidth: 800
+
+topology:
+  # CPU <-> CPU
+  - [CPU0, CPU1, 100, 5, fabric]
+  - [CPU1, CPU0, 100, 5, fabric]
+
+  # CPU <-> GPU
+  - [CPU0, GPU0, 80, 8, pci]
+  - [GPU0, CPU0, 80, 8, pci]
+  - [CPU1, GPU1, 80, 8, pci]
+  - [GPU1, CPU1, 80, 8, pci]
+
+  # GPU <-> GPU (rapide)
+  - [GPU0, GPU1, 400, 2, xgmi]
+  - [GPU1, GPU0, 400, 2, xgmi]
+
+  # CPU <-> NPU
+  - [CPU0, NPU0, 60, 6, pci]
+  - [NPU0, CPU0, 60, 6, pci]
+
+  # CPU <-> DPU
+  - [CPU0, DPU0, 40, 10, pci]
+  - [DPU0, CPU0, 40, 10, pci]
+  - [CPU1, DPU0, 40, 10, pci]
+  - [DPU0, CPU1, 40, 10, pci]
+
+tasks:
+  # 4 GPU-Intensive Training Jobs
+  - name: train_a
+    compute: 900
+    memory: 8192
+    data_in: 2048
+    data_out: 512
+    preferred_kind: gpu
+    priority: 9
+    deadline: 20000
+    preemptible: true
+    device: GPU0
+
+  - name: train_b
+    compute: 900
+    memory: 8192
+    data_in: 2048
+    data_out: 512
+    preferred_kind: gpu
+    priority: 8
+    deadline: 20000
+    preemptible: true
+    device: GPU1
+
+  - name: train_c
+    compute: 800
+    memory: 6144
+    data_in: 2048
+    data_out: 512
+    preferred_kind: gpu
+    priority: 7
+    deadline: 18000
+    preemptible: true
+    device: GPU0
+
+  - name: train_d
+    compute: 800
+    memory: 6144
+    data_in: 2048
+    data_out: 512
+    preferred_kind: gpu
+    priority: 7
+    deadline: 18000
+    preemptible: true
+    device: GPU1
+
+  # 2 real-time inference jobs on the NPU
+  - name: infer_rt_1
+    compute: 400
+    memory: 4096
+    data_in: 1024
+    data_out: 256
+    preferred_kind: npu
+    priority: 10
+    deadline: 8000
+    preemptible: true
+    device: NPU0
+
+  - name: infer_rt_2
+    compute: 400
+    memory: 4096
+    data_in: 1024
+    data_out: 256
+    preferred_kind: npu
+    priority: 10
+    deadline: 8000
+    preemptible: true
+    device: NPU0
+
+  # 3 CPU pre/post-processing tasks
+  - name: preprocess_0
+    compute: 200
+    memory: 4096
+    data_in: 1024
+    data_out: 1024
+    preferred_kind: cpu
+    priority: 6
+    deadline: 12000
+    preemptible: true
+    device: CPU0
+
+  - name: preprocess_1
+    compute: 200
+    memory: 4096
+    data_in: 1024
+    data_out: 1024
+    preferred_kind: cpu
+    priority: 6
+    deadline: 12000
+    preemptible: true
+    device: CPU1
+
+  - name: postprocess
+    compute: 250
+    memory: 4096
+    data_in: 2048
+    data_out: 512
+    preferred_kind: cpu
+    priority: 7
+    deadline: 22000
+    preemptible: true
+    device: CPU1
+
+  # 3 Ingestion/Storage Tasks on DPU/CPU
+  - name: ingest_a
+    compute: 80
+    memory: 2048
+    data_in: 1024
+    data_out: 1024
+    preferred_kind: dpu
+    priority: 5
+    deadline: 6000
+    preemptible: true
+    device: DPU0
+
+  - name: ingest_b
+    compute: 80
+    memory: 2048
+    data_in: 1024
+    data_out: 1024
+    preferred_kind: dpu
+    priority: 5
+    deadline: 6000
+    preemptible: true
+    device: DPU0
+
+  - name: store_results
+    compute: 100
+    memory: 2048
+    data_in: 1024
+    data_out: 256
+    preferred_kind: dpu
+    priority: 4
+    deadline: 24000
+    preemptible: true
+    device: DPU0
+
+dependencies:
+  # Ingestion -> Preprocessing
+  - src: ingest_a
+    dst: preprocess_0
+    bytes: 1024
+  - src: ingest_b
+    dst: preprocess_1
+    bytes: 1024
+
+  # Preprocessing -> Training
+  - src: preprocess_0
+    dst: train_a
+    bytes: 2048
+  - src: preprocess_0
+    dst: train_c
+    bytes: 2048
+  - src: preprocess_1
+    dst: train_b
+    bytes: 2048
+  - src: preprocess_1
+    dst: train_d
+    bytes: 2048
+
+  # Preprocessing -> Real-time inference
+  - src: preprocess_0
+    dst: infer_rt_1
+    bytes: 1024
+  - src: preprocess_1
+    dst: infer_rt_2
+    bytes: 1024
+
+  # Training + Inference -> Post-processing
+  - src: train_a
+    dst: postprocess
+    bytes: 1024
+  - src: train_b
+    dst: postprocess
+    bytes: 1024
+  - src: infer_rt_1
+    dst: postprocess
+    bytes: 512
+  - src: infer_rt_2
+    dst: postprocess
+    bytes: 512
+
+  # Post-processing -> Storage
+  - src: postprocess
+    dst: store_results
+    bytes: 2048

@@ -1,0 +1,74 @@
+# Benchmark3 - A simple toy scenario to illustrate beneficial migrations
+
+devices:
+  # Fast device (suitable for critical tasks)
+  - name: CPU0
+    kind: cpu
+    speed: 120         # fast
+    threads: 4
+    memories:
+      - name: DRAM
+        capacity: 8192
+        latency: 80
+        bandwidth: 150
+
+  # Slower device
+  - name: CPU1
+    kind: cpu
+    speed: 60          # 2x slower than CPU0
+    threads: 4
+    memories:
+      - name: DRAM
+        capacity: 8192
+        latency: 80
+        bandwidth: 150
+
+topology:
+  # CPU <-> CPU (Moderate latency/cost)
+  - [CPU0, CPU1, 100, 5, fabric]
+  - [CPU1, CPU0, 100, 5, fabric]
+
+tasks:
+  # Two low-priority tasks
+  - name: job_lo_1
+    compute: 200
+    memory: 1024
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 5
+    deadline: 15000
+    preemptible: true
+    device: CPU0
+
+  - name: job_lo_2
+    compute: 200
+    memory: 1024
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 5
+    deadline: 15000
+    preemptible: true
+    device: CPU1
+
+  # Initially misplaced critical task
+  - name: job_crit
+    compute: 400
+    memory: 1024
+    data_in: 512
+    data_out: 512
+    preferred_kind: cpu
+    priority: 9
+    deadline: 8000      # Tight deadline
+    preemptible: true
+    device: CPU1        # Starts on the slow device.
+
+dependencies:
+  # A small chain to make the graph non-trivial.
+  - src: job_lo_1
+    dst: job_crit
+    bytes: 256
+  - src: job_lo_2
+    dst: job_crit
+    bytes: 256

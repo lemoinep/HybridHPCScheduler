@@ -304,3 +304,11 @@ class APICScheduler:
         task = self.model.tasks[seg.task]
         task.progress = min(task.compute, task.progress + seg.compute)
         task.current_device = seg.device
+
+    def reset_tasks(self):
+        """
+        Reset per-episode task state (progress and current_device).
+        """
+        for task in self.model.tasks.values():
+            task.progress = 0
+            task.current_device = ""
