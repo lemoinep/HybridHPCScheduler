@@ -405,7 +405,6 @@ python main.py show --config configs/<your_config>.yaml --output <output_dir>
 - Prints key information about the environment (devices, tasks) and/or the latest results in `<output_dir>`.  
 - Useful for quickly checking what has been trained or benchmarked for a given config.
 
----
 
 ***
 
