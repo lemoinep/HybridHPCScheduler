@@ -1,3 +1,6 @@
+// Author(s): Dr. Patrick Lemoine
+// Version 1.0 05/06/2026
+
 #include <hwloc.h>
 #include <yaml-cpp/yaml.h>
 
@@ -175,7 +178,7 @@ int main(int argc, char** argv) {
     add_arg_bool(argc, argv, "--no-real-gpu", cfg.detect_gpu_real);
     add_arg_bool(argc, argv, "--no-sim-gpu", cfg.add_simulated_gpu);
 
-    std::string out = "benchmark6.yaml";
+    std::string out = "ScanExascale.yaml";
     for (int i = 1; i < argc; ++i) {
         std::string s = argv[i];
         if (s.rfind("--output=", 0) == 0) out = s.substr(9);

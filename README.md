@@ -407,7 +407,20 @@ python main.py show --config configs/<your_config>.yaml --output <output_dir>
 
 ---
 
+***
 
+### Interactive guide
+
+Run an interactive guide or tutorial for a given configuration (for example: step‑by‑step explanation of the environment, actions, and metrics).
+
+```bash
+python main.py guide --config configs/<your_config>.yaml
+```
+
+- `--config` – YAML config used as the basis for the guide.  
+- Typically runs without training, and walks through how the scheduler and RL agent interact on this scenario.
+
+---
 
 ## For more information
 
