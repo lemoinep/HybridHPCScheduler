@@ -272,10 +272,142 @@ The various case study models are located in the `configs` directory. The HPC co
 <img src="Images/demo_visualization.png" width="100%" />
 <img src="Images/large_cluster_visualization.png" width="100%" />
  
- ---
+
+---
+
 **Note**: 
 - I have added a guide to the beginner's program on HPC configuration.
 - Future Development: I will create a 3D visualization later to navigate a complex HPC environment. I will give some thought to the design.
+
+
+***
+
+## Command line usage
+
+All commands are run from the project root using `main.py`.  
+Experiment settings (cluster, tasks, topology, RL hyperparameters, etc.) are defined in YAML configuration files under `configs/`.
+
+### Train an agent
+
+Train a PPO agent on a given configuration and save the model and logs to an output directory.
+
+```bash
+python main.py train --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- `--config` – Path to a YAML config file describing the environment (devices, tasks, dependencies, etc.).  
+- `--output` – Directory where the trained model and training logs will be saved.
+
+***
+
+### Benchmark a trained agent
+
+Evaluate a trained agent on multiple episodes and export summary statistics as CSV files.
+
+```bash
+python main.py benchmark --config configs/<your_config>.yaml --episodes <n_episodes> --output <output_dir>
+```
+
+- `--config` – YAML config used for the benchmark environment.  
+- `--episodes` – Number of evaluation episodes to run.  
+- `--output` – Directory containing the trained model; benchmark results (e.g. `benchmark_summary.csv`, `benchmark_stats.csv`) are written there.
+
+***
+
+### Evaluate (detailed run)
+
+Run a more detailed evaluation (typically one or a few episodes) and dump traces and metrics for analysis.
+
+```bash
+python main.py evaluate --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- `--config` – YAML config to evaluate.  
+- `--output` – Directory where evaluation traces and logs will be stored  
+  (for example JSONL traces and per-step logs).
+
+***
+
+### Generate plots
+
+Create plots from previously saved benchmark or evaluation results.
+
+```bash
+python main.py plot --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- Reads result files from `<output_dir>` (e.g. `benchmark_summary.csv`).  
+- Produces figures (PNG/HTML) for visualizing metrics such as reward, lateness, congestion, etc.
+
+***
+
+### Compare multiple configurations
+
+Compare the performance of several configurations side by side.
+
+```bash
+python main.py compare --configs configs/<config1>.yaml configs/<config2>.yaml ... --output <output_dir>
+```
+
+- `--configs` – List of YAML configs to compare.  
+- `--output` – Directory where comparison tables and plots will be written  
+  (aggregated statistics across configurations).
+
+***
+
+### Visualize a single configuration
+
+Launch visualization for a single configuration (for example: Gantt charts, timelines, or other views).
+
+```bash
+python main.py visualize --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- Uses the logs and traces associated with `<your_config>` stored in `<output_dir>`.  
+- Generates visual artifacts to inspect schedules and agent decisions.
+
+***
+
+### Visualize all runs
+
+Batch visualization over all available runs in a given directory.
+
+```bash
+python main.py visualize-all --output <output_root_dir>
+```
+
+- Scans `<output_root_dir>` for available experiments.  
+- Generates visualizations for each run (e.g. one set of plots per config / experiment).
+
+***
+
+### Generate a textual report
+
+Produce a textual summary report for a given configuration (for example aggregating metrics and key statistics).
+
+```bash
+python main.py report --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- Reads results for `<your_config>` from `<output_dir>`.  
+- Generates a human-readable report (e.g. markdown, HTML, or text) summarizing performance.
+
+***
+
+### Show a quick summary
+
+Display a quick summary of a configuration or an existing run directly in the terminal.
+
+```bash
+python main.py show --config configs/<your_config>.yaml --output <output_dir>
+```
+
+- Prints key information about the environment (devices, tasks) and/or the latest results in `<output_dir>`.  
+- Useful for quickly checking what has been trained or benchmarked for a given config.
+
+---
+
+
 
 ## For more information
 
