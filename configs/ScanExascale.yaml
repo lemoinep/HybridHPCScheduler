@@ -1,0 +1,1961 @@
+devices:
+  - name: CPU0
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU1
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU2
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU3
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU4
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU5
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU6
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU7
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU8
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU9
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU10
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: CPU11
+    kind: cpu
+    speed: 120
+    threads: 1
+    memories:
+      - name: DRAM
+        capacity: 131072
+        latency: 80
+        bandwidth: 200
+      - name: L3
+        capacity: 32768
+        latency: 12
+        bandwidth: 800
+  - name: GPU0
+    kind: gpu
+    speed: 1200
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+  - name: GPU1
+    kind: gpu
+    speed: 1200
+    threads: 256
+    memories:
+      - name: HBM
+        capacity: 49152
+        latency: 3
+        bandwidth: 1600
+      - name: L2
+        capacity: 8192
+        latency: 1
+        bandwidth: 3000
+  - name: NPU0
+    kind: npu
+    speed: 800
+    threads: 128
+    memories:
+      - name: SRAM
+        capacity: 16384
+        latency: 2
+        bandwidth: 1400
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+  - name: TPU0
+    kind: tpu
+    speed: 950
+    threads: 128
+    memories:
+      - name: SRAM
+        capacity: 32768
+        latency: 3
+        bandwidth: 1500
+      - name: CACHE
+        capacity: 4096
+        latency: 1
+        bandwidth: 2500
+  - name: DPU0
+    kind: dpu
+    speed: 250
+    threads: 32
+    memories:
+      - name: SRAM
+        capacity: 8192
+        latency: 2
+        bandwidth: 1000
+      - name: CACHE
+        capacity: 2048
+        latency: 1
+        bandwidth: 1500
+topology:
+  -
+    - CPU0
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU0
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU0
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU0
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU1
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU1
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU1
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU1
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU10
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU10
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU10
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU10
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU11
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU11
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU11
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU11
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU2
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU2
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU2
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU2
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU3
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU3
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU3
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU3
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU4
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU4
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU4
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU4
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU5
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU5
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU5
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU5
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU6
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU6
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU6
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU6
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU7
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU7
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU7
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU7
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU8
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU8
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU8
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU8
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - CPU9
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - CPU9
+    - GPU0
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - GPU1
+    - 120
+    - 8
+    - pci
+  -
+    - CPU9
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - CPU9
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - DPU0
+    - CPU0
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU1
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU10
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU11
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU2
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU3
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU4
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU5
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU6
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU7
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU8
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - CPU9
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - GPU0
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - GPU1
+    - 250
+    - 8
+    - pci
+  -
+    - DPU0
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - DPU0
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - GPU0
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - GPU0
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - GPU0
+    - GPU1
+    - 2000
+    - 1
+    - xgmi
+  -
+    - GPU0
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - GPU0
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - GPU1
+    - CPU0
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU1
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU10
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU11
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU2
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU3
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU4
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU5
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU6
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU7
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU8
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - CPU9
+    - 120
+    - 8
+    - pci
+  -
+    - GPU1
+    - DPU0
+    - 250
+    - 8
+    - pci
+  -
+    - GPU1
+    - GPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - GPU1
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - GPU1
+    - TPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - NPU0
+    - CPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU1
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU10
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU11
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU2
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU3
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU4
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU5
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU6
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU7
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU8
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - CPU9
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - DPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - GPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - GPU1
+    - 800
+    - 3
+    - xgmi
+  -
+    - NPU0
+    - TPU0
+    - 800
+    - 3
+    - xgmi
+  -
+    - TPU0
+    - CPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU1
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU10
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU11
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU2
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU3
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU4
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU5
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU6
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU7
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU8
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - CPU9
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - DPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - GPU0
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - GPU1
+    - 2000
+    - 1
+    - xgmi
+  -
+    - TPU0
+    - NPU0
+    - 800
+    - 3
+    - xgmi
+tasks:
+  - name: ingest
+    compute: 40
+    memory: 512
+    data_in: 64
+    data_out: 64
+    preferred_kind: dpu
+    priority: 3
+    deadline: 4000
+    preemptible: true
+    device: DPU0
+  - name: decode
+    compute: 80
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: cpu
+    priority: 3
+    deadline: 6000
+    preemptible: true
+    device: CPU0
+  - name: preprocess
+    compute: 120
+    memory: 2048
+    data_in: 256
+    data_out: 256
+    preferred_kind: cpu
+    priority: 4
+    deadline: 8000
+    preemptible: true
+    device: CPU0
+  - name: infer_a
+    compute: 500
+    memory: 4096
+    data_in: 512
+    data_out: 256
+    preferred_kind: gpu
+    priority: 10
+    deadline: 12000
+    preemptible: true
+    device: GPU0
+  - name: infer_b
+    compute: 420
+    memory: 4096
+    data_in: 512
+    data_out: 256
+    preferred_kind: npu
+    priority: 9
+    deadline: 12000
+    preemptible: true
+    device: NPU0
+  - name: fuse
+    compute: 90
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: tpu
+    priority: 8
+    deadline: 15000
+    preemptible: true
+    device: TPU0
+  - name: postprocess
+    compute: 70
+    memory: 1024
+    data_in: 128
+    data_out: 128
+    preferred_kind: cpu
+    priority: 6
+    deadline: 18000
+    preemptible: true
+    device: CPU1
+  - name: store
+    compute: 30
+    memory: 512
+    data_in: 64
+    data_out: 64
+    preferred_kind: dpu
+    priority: 2
+    deadline: 20000
+    preemptible: true
+    device: DPU0
+dependencies:
+  - src: ingest
+    dst: decode
+    bytes: 64
+  - src: decode
+    dst: preprocess
+    bytes: 128
+  - src: preprocess
+    dst: infer_a
+    bytes: 512
+  - src: preprocess
+    dst: infer_b
+    bytes: 512
+  - src: infer_a
+    dst: fuse
+    bytes: 128
+  - src: infer_b
+    dst: fuse
+    bytes: 128
+  - src: fuse
+    dst: postprocess
+    bytes: 64
+  - src: postprocess
+    dst: store
+    bytes: 32
