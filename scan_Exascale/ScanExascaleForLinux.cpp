@@ -1,9 +1,8 @@
 #define NOMINMAX
 
 // Author(s): Dr. Patrick Lemoine
-// Version 1.2 (Linux) 06/06/2026 — CPU = PUs, real GPU detection via hwloc
-// Note: NPU, TPU, DPU are synthetic accelerators controlled by configuration.
-// Add PU mode
+// Version 1.3 (Linux) 06/06/2026 — CPU = PUs, real GPU detection via hwloc
+// Note: NPU, TPU, DPU are synthetic accelerators controlled by configuration or cluster description.
 
 #include <hwloc.h>
 #include <yaml-cpp/yaml.h>
@@ -72,13 +71,16 @@ struct SimConfig {
     int task_deadline_base = 4000;
 
     bool detect_cpu_real = true;
-    bool detect_gpu_real = true;          // enabled on Linux
+    bool detect_gpu_real = true;    // enabled on Linux
     bool add_simulated_gpu = true;
 
-    bool real_only = false;              // real hardware only
+    bool real_only = false;         // real hardware only
     bool enable_synthetic_accels = true; // synthetic NPU/TPU/DPU
 
-    bool verbose = false;                // verbose logging
+    bool verbose = false;           // verbose logging
+
+    std::string node_type;          // logical node type from cluster description
+    std::string cluster_desc = "ClusterDescription.yaml";
 };
 
 struct DeviceInfo {
@@ -188,6 +190,16 @@ int main(int argc, char** argv) {
     add_arg_bool(argc, argv, "--real",        cfg.real_only);
     add_arg_bool(argc, argv, "--verbose",     cfg.verbose);
 
+    // Parse node_type and cluster_desc
+    for (int i = 1; i < argc; ++i) {
+        std::string s = argv[i];
+        if (s.rfind("--node-type=", 0) == 0) {
+            cfg.node_type = s.substr(std::string("--node-type=").size());
+        } else if (s.rfind("--cluster-desc=", 0) == 0) {
+            cfg.cluster_desc = s.substr(std::string("--cluster-desc=").size());
+        }
+    }
+
     // Apply boolean flags
     if (no_real_cpu) cfg.detect_cpu_real = false;
     if (no_real_gpu) cfg.detect_gpu_real = false;
@@ -230,6 +242,52 @@ int main(int argc, char** argv) {
 
     // PUs = logical processors (Linux CPU 0..N)
     int pus  = nbobjs(topo, HWLOC_OBJ_PU);
+
+    // If node_type is defined, we may override PUs and accelerator counts from cluster description
+    if (!cfg.node_type.empty()) {
+        try {
+            YAML::Node cluster = YAML::LoadFile(cfg.cluster_desc);
+            if (cluster["node_types"]) {
+                for (const auto& nt : cluster["node_types"]) {
+                    if (!nt["name"] || nt["name"].as<std::string>() != cfg.node_type)
+                        continue;
+
+                    if (nt["cpu"]) {
+                        if (nt["cpu"]["pus"])
+                            pus = nt["cpu"]["pus"].as<int>();
+                        if (nt["cpu"]["speed"])
+                            cfg.cpu_speed = nt["cpu"]["speed"].as<int>();
+                    }
+
+                    if (nt["gpu"]) {
+                        if (nt["gpu"]["count"])
+                            cfg.gpu_count_sim = nt["gpu"]["count"].as<int>();
+                        if (nt["gpu"]["speed"])
+                            cfg.gpu_speed = nt["gpu"]["speed"].as<int>();
+                        if (nt["gpu"]["threads"])
+                            cfg.gpu_threads = nt["gpu"]["threads"].as<int>();
+                        if (nt["gpu"]["mem_capacity"])
+                            cfg.gpu_mem_capacity = nt["gpu"]["mem_capacity"].as<int>();
+                        if (nt["gpu"]["mem_bandwidth"])
+                            cfg.gpu_mem_bandwidth = nt["gpu"]["mem_bandwidth"].as<int>();
+                    }
+
+                    if (nt["npu"] && nt["npu"]["count"])
+                        cfg.npu_count = nt["npu"]["count"].as<int>();
+                    if (nt["tpu"] && nt["tpu"]["count"])
+                        cfg.tpu_count = nt["tpu"]["count"].as<int>();
+                    if (nt["dpu"] && nt["dpu"]["count"])
+                        cfg.dpu_count = nt["dpu"]["count"].as<int>();
+
+                    break;
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Warning: failed to load cluster description from "
+                      << cfg.cluster_desc << ": " << e.what() << "\n";
+        }
+    }
+
     int cpus = std::max(1, pus);
 
     if (cfg.verbose) {
@@ -258,7 +316,7 @@ int main(int argc, char** argv) {
     int gpu_idx = 0;
     int real_gpu_count = 0;
 
-    // Real CPUs from hwloc PUs
+    // Real CPUs from hwloc PUs (or overridden PUs)
     if (cfg.detect_cpu_real) {
         for (int i = 0; i < cpus; ++i) {
             DeviceInfo d;
@@ -278,7 +336,8 @@ int main(int argc, char** argv) {
     }
 
     // Real GPUs via OS devices (requires hwloc built with GPU backends)
-    if (cfg.detect_gpu_real) {
+    if (cfg.detect_gpu_real && cfg.node_type.empty()) {
+        // In node_type mode we typically want synthetic counts, so only probe when node_type is empty
         hwloc_obj_t osdev = nullptr;
         while ((osdev = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_OS_DEVICE, osdev)) != nullptr) {
             if (!osdev->attr) continue;
