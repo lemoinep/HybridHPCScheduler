@@ -1,8 +1,9 @@
 #define NOMINMAX
 
 // Author(s): Dr. Patrick Lemoine
-// Version 1.0 (Linux) 05/06/2026 — CPU = PUs, real GPU detection via hwloc
-// Todo add NPU, DPU, TPU hardware detection
+// Version 1.2 (Linux) 06/06/2026 — CPU = PUs, real GPU detection via hwloc
+// Note: NPU, TPU, DPU are synthetic accelerators controlled by configuration.
+// Add PU mode
 
 #include <hwloc.h>
 #include <yaml-cpp/yaml.h>
@@ -71,10 +72,13 @@ struct SimConfig {
     int task_deadline_base = 4000;
 
     bool detect_cpu_real = true;
-    bool detect_gpu_real = true;    // enabled on Linux
+    bool detect_gpu_real = true;          // enabled on Linux
     bool add_simulated_gpu = true;
 
-    bool real_only = false;         // real hardware only
+    bool real_only = false;              // real hardware only
+    bool enable_synthetic_accels = true; // synthetic NPU/TPU/DPU
+
+    bool verbose = false;                // verbose logging
 };
 
 struct DeviceInfo {
@@ -173,11 +177,32 @@ int main(int argc, char** argv) {
     add_arg_int(argc, argv, "--task-priority-base", cfg.task_priority_base);
     add_arg_int(argc, argv, "--task-deadline-base", cfg.task_deadline_base);
 
-    // Parse boolean arguments
-    add_arg_bool(argc, argv, "--no-real-cpu", cfg.detect_cpu_real);   
-    add_arg_bool(argc, argv, "--no-real-gpu", cfg.detect_gpu_real);
-    add_arg_bool(argc, argv, "--no-sim-gpu",  cfg.add_simulated_gpu);
+    // Boolean flags with correct semantics
+    bool no_real_cpu = false;
+    bool no_real_gpu = false;
+    bool no_sim_gpu  = false;
+
+    add_arg_bool(argc, argv, "--no-real-cpu", no_real_cpu);
+    add_arg_bool(argc, argv, "--no-real-gpu", no_real_gpu);
+    add_arg_bool(argc, argv, "--no-sim-gpu",  no_sim_gpu);
     add_arg_bool(argc, argv, "--real",        cfg.real_only);
+    add_arg_bool(argc, argv, "--verbose",     cfg.verbose);
+
+    // Apply boolean flags
+    if (no_real_cpu) cfg.detect_cpu_real = false;
+    if (no_real_gpu) cfg.detect_gpu_real = false;
+    if (no_sim_gpu)  cfg.add_simulated_gpu = false;
+
+    // Real-only mode: no simulated accelerators at all
+    if (cfg.real_only) {
+        cfg.add_simulated_gpu       = false;
+        cfg.enable_synthetic_accels = false;
+    }
+
+    // If user sets all synthetic counts to 0, disable them explicitly
+    if (cfg.npu_count == 0 && cfg.tpu_count == 0 && cfg.dpu_count == 0) {
+        cfg.enable_synthetic_accels = false;
+    }
 
     std::string out = "ScanExascale.yaml";
     std::cout << "Save File\n" << out << "\n";
@@ -187,21 +212,13 @@ int main(int argc, char** argv) {
         if (s.rfind("--output=", 0) == 0) out = s.substr(9);
     }
 
-    // Real-only mode: no simulated accelerators
-    if (cfg.real_only) {
-        cfg.add_simulated_gpu = false;
-        cfg.npu_count = 0;
-        cfg.tpu_count = 0;
-        cfg.dpu_count = 0;
-    }
-
     hwloc_topology_t topo;
     if (hwloc_topology_init(&topo) != 0) {
         std::cerr << "Failed to init hwloc topology\n";
         return 1;
     }
 
-    // On Linux, enable I/O device discovery so we see GPUs, etc. 
+    // On Linux, enable I/O device discovery so we see GPUs, etc.
     unsigned io_flags = HWLOC_TOPOLOGY_FLAG_IO_DEVICES | HWLOC_TOPOLOGY_FLAG_IO_BRIDGES;
     hwloc_topology_set_flags(topo, io_flags);
 
@@ -214,6 +231,26 @@ int main(int argc, char** argv) {
     // PUs = logical processors (Linux CPU 0..N)
     int pus  = nbobjs(topo, HWLOC_OBJ_PU);
     int cpus = std::max(1, pus);
+
+    if (cfg.verbose) {
+        std::cerr << "=== hwloc topology summary ===\n";
+        std::cerr << "PUs (logical processors): " << pus << "\n";
+
+        std::cerr << "=== hwloc OS devices ===\n";
+        hwloc_obj_t osdev_dbg = nullptr;
+        while ((osdev_dbg = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_OS_DEVICE, osdev_dbg)) != nullptr) {
+            if (!osdev_dbg->attr) continue;
+            auto type = osdev_dbg->attr->osdev.type;
+            const char* name    = osdev_dbg->name ? osdev_dbg->name : "NULL";
+            const char* subtype = osdev_dbg->subtype ? osdev_dbg->subtype : "";
+
+            std::cerr << "OS device: name=" << name
+                      << " type=" << type
+                      << " subtype=" << subtype
+                      << "\n";
+        }
+        std::cerr << "==============================\n";
+    }
 
     cfg.cpu_threads_per_socket = 1;
 
@@ -240,7 +277,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Real GPUs via OS devices (requires hwloc built with GPU backends) 
+    // Real GPUs via OS devices (requires hwloc built with GPU backends)
     if (cfg.detect_gpu_real) {
         hwloc_obj_t osdev = nullptr;
         while ((osdev = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_OS_DEVICE, osdev)) != nullptr) {
@@ -249,7 +286,6 @@ int main(int argc, char** argv) {
 
             if (type == HWLOC_OBJ_OSDEV_GPU || (osdev->attr->osdev.types & HWLOC_OBJ_OSDEV_GPU)) {
                 DeviceInfo d;
-                // Use hwloc OS device name, e.g. "card0", ":0.0", "cuda0" depending on backend 
                 d.name       = "GPU" + std::to_string(real_gpu_count);
                 d.kind       = "gpu";
                 d.speed      = cfg.gpu_speed;
@@ -268,7 +304,7 @@ int main(int argc, char** argv) {
         gpu_idx = real_gpu_count;
     }
 
-    // Simulated GPUs (only if not in real-only mode)
+    // Simulated GPUs (only if not in real-only mode and flag enabled)
     if (cfg.add_simulated_gpu && !cfg.real_only) {
         int target_gpus = (cfg.gpu_count_sim > 0) ? cfg.gpu_count_sim : 2;
 
@@ -289,53 +325,55 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Simulated NPUs / TPUs / DPUs (disabled in real-only mode through zero counts)
-    for (int i = 0; i < cfg.npu_count; ++i) {
-        DeviceInfo d;
-        d.name       = npu_name(i);
-        d.kind       = "npu";
-        d.speed      = cfg.npu_speed;
-        d.threads    = cfg.npu_threads;
-        d.dram_cap   = cfg.npu_mem_capacity;
-        d.dram_lat   = cfg.npu_mem_latency;
-        d.dram_bw    = cfg.npu_mem_bandwidth;
-        d.cache_cap  = cfg.npu_cache_capacity;
-        d.cache_lat  = cfg.npu_cache_latency;
-        d.cache_bw   = cfg.npu_cache_bandwidth;
-        d.is_real    = false;
-        devices.push_back(d);
-    }
+    // Simulated NPUs / TPUs / DPUs (synthetic accelerators)
+    if (cfg.enable_synthetic_accels) {
+        for (int i = 0; i < cfg.npu_count; ++i) {
+            DeviceInfo d;
+            d.name       = npu_name(i);
+            d.kind       = "npu";
+            d.speed      = cfg.npu_speed;
+            d.threads    = cfg.npu_threads;
+            d.dram_cap   = cfg.npu_mem_capacity;
+            d.dram_lat   = cfg.npu_mem_latency;
+            d.dram_bw    = cfg.npu_mem_bandwidth;
+            d.cache_cap  = cfg.npu_cache_capacity;
+            d.cache_lat  = cfg.npu_cache_latency;
+            d.cache_bw   = cfg.npu_cache_bandwidth;
+            d.is_real    = false;
+            devices.push_back(d);
+        }
 
-    for (int i = 0; i < cfg.tpu_count; ++i) {
-        DeviceInfo d;
-        d.name       = tpu_name(i);
-        d.kind       = "tpu";
-        d.speed      = cfg.tpu_speed;
-        d.threads    = cfg.tpu_threads;
-        d.dram_cap   = cfg.tpu_mem_capacity;
-        d.dram_lat   = cfg.tpu_mem_latency;
-        d.dram_bw    = cfg.tpu_mem_bandwidth;
-        d.cache_cap  = cfg.tpu_cache_capacity;
-        d.cache_lat  = cfg.tpu_cache_latency;
-        d.cache_bw   = cfg.tpu_cache_bandwidth;
-        d.is_real    = false;
-        devices.push_back(d);
-    }
+        for (int i = 0; i < cfg.tpu_count; ++i) {
+            DeviceInfo d;
+            d.name       = tpu_name(i);
+            d.kind       = "tpu";
+            d.speed      = cfg.tpu_speed;
+            d.threads    = cfg.tpu_threads;
+            d.dram_cap   = cfg.tpu_mem_capacity;
+            d.dram_lat   = cfg.tpu_mem_latency;
+            d.dram_bw    = cfg.tpu_mem_bandwidth;
+            d.cache_cap  = cfg.tpu_cache_capacity;
+            d.cache_lat  = cfg.tpu_cache_latency;
+            d.cache_bw   = cfg.tpu_cache_bandwidth;
+            d.is_real    = false;
+            devices.push_back(d);
+        }
 
-    for (int i = 0; i < cfg.dpu_count; ++i) {
-        DeviceInfo d;
-        d.name       = dpu_name(i);
-        d.kind       = "dpu";
-        d.speed      = cfg.dpu_speed;
-        d.threads    = cfg.dpu_threads;
-        d.dram_cap   = cfg.dpu_mem_capacity;
-        d.dram_lat   = cfg.dpu_mem_latency;
-        d.dram_bw    = cfg.dpu_mem_bandwidth;
-        d.cache_cap  = cfg.dpu_cache_capacity;
-        d.cache_lat  = cfg.dpu_cache_latency;
-        d.cache_bw   = cfg.dpu_cache_bandwidth;
-        d.is_real    = false;
-        devices.push_back(d);
+        for (int i = 0; i < cfg.dpu_count; ++i) {
+            DeviceInfo d;
+            d.name       = dpu_name(i);
+            d.kind       = "dpu";
+            d.speed      = cfg.dpu_speed;
+            d.threads    = cfg.dpu_threads;
+            d.dram_cap   = cfg.dpu_mem_capacity;
+            d.dram_lat   = cfg.dpu_mem_latency;
+            d.dram_bw    = cfg.dpu_mem_bandwidth;
+            d.cache_cap  = cfg.dpu_cache_capacity;
+            d.cache_lat  = cfg.dpu_cache_latency;
+            d.cache_bw   = cfg.dpu_cache_bandwidth;
+            d.is_real    = false;
+            devices.push_back(d);
+        }
     }
 
     YAML::Node root;
@@ -403,12 +441,12 @@ int main(int argc, char** argv) {
         tasks.push_back(t);
     };
 
-    std::string dpu0 = (cfg.dpu_count > 0) ? dpu_name(0) : "";
+    std::string dpu0 = (cfg.enable_synthetic_accels && cfg.dpu_count > 0) ? dpu_name(0) : "";
     std::string cpu0 = (cpus > 0) ? cpu_name(0) : "";
     std::string cpu1 = (cpus > 1) ? cpu_name(1) : cpu0;
     std::string gpu0 = (gpu_idx > 0) ? gpu_name(0) : "";
-    std::string npu0 = (cfg.npu_count > 0) ? npu_name(0) : "";
-    std::string tpu0 = (cfg.tpu_count > 0) ? tpu_name(0) : "";
+    std::string npu0 = (cfg.enable_synthetic_accels && cfg.npu_count > 0) ? npu_name(0) : "";
+    std::string tpu0 = (cfg.enable_synthetic_accels && cfg.tpu_count > 0) ? tpu_name(0) : "";
 
     if (!dpu0.empty())
         add_task("ingest",      40,  512,  64,  64, "dpu", cfg.task_priority_base,                cfg.task_deadline_base,          dpu0);
@@ -468,8 +506,9 @@ int main(int argc, char** argv) {
 
     std::cout << "Generated " << out << " with " << devices.size() << " devices ("
               << cpus << " CPUs, " << gpu_idx << " GPUs, "
-              << cfg.npu_count << " NPUs, " << cfg.tpu_count << " TPUs, "
-              << cfg.dpu_count << " DPUs)\n";
+              << (cfg.enable_synthetic_accels ? cfg.npu_count : 0) << " NPUs, "
+              << (cfg.enable_synthetic_accels ? cfg.tpu_count : 0) << " TPUs, "
+              << (cfg.enable_synthetic_accels ? cfg.dpu_count : 0) << " DPUs)\n";
 
     hwloc_topology_destroy(topo);
     return 0;
