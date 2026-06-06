@@ -120,7 +120,7 @@ class APICEnv(gym.Env):
             if seg.get("device") == name and seg.get("end", self.now) > self.now
         ]
     
-        # Forcer une replanification au prochain step
+        # Force rescheduling at the next step
         self._device_failure_pending = True
         self.solve_failed = False
     
@@ -145,9 +145,13 @@ class APICEnv(gym.Env):
             "device": name,
         })
 
-
+        
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
+        
+        # Must be activated
+        #if hasattr(self, "failure_scenario") and self.failure_scenario is not None:
+        #    self.failure_scenario.reset()
         
         self.scheduler.reset_tasks()
     
@@ -158,7 +162,7 @@ class APICEnv(gym.Env):
         self.segment_counter = 0
         self._device_failure_pending = False
     
-        # NEW: réinitialiser le compteur de retards
+        # reset delay counter
         self.prev_late_tasks = 0
     
         self.episode_offset = int(np.random.randint(0, 3))
@@ -258,11 +262,11 @@ class APICEnv(gym.Env):
     
         elif action_type == 3:
             task.priority = min(task.priority + 1, 10)
-
+            # No immediate rescheduling
     
         elif action_type == 4:
             task.priority = max(task.priority - 1, 1)
-
+            # No immediate rescheduling
     
         elif action_type == 5:
             replanned = 1
@@ -276,142 +280,12 @@ class APICEnv(gym.Env):
         return replanned, migration_cost, continuity_bonus
 
 
-    def step_old(self, action):
-        t0 = time.perf_counter()
-        
-        replanned, migration_cost, continuity_bonus = self.apply_action(action)
-        self.now += self.tick_ms
-    
-        t1 = time.perf_counter()
-        
-        if getattr(self, "_device_failure_pending", False):
-           replanned = 1
-           self._device_failure_pending = False
-    
-        if replanned == 1 and not getattr(self, "solve_failed", False):
-            self.schedule = self.scheduler.solve_window(horizon=self.episode_limit)
-            
-            if self.schedule is not None:
-                for idx, _ in self.schedule.iterrows():
-                    if idx not in self.segment_states:
-                        self.segment_states[idx] = 0
-            else:
-                self.solve_failed = True
-    
-        t2 = time.perf_counter()
-    
-        if getattr(self, "solve_failed", False):
-            obs = self._observe(replanned=replanned)
-            info = {
-                "error": "solve_failed",
-                "segments": len(self.segments_log),
-                "action_mask": None,
-            }
-            return obs, -100.0, True, False, info
-    
-        if self.schedule is None:
-            print("WARNING: schedule is None in step()")
-            obs = self._observe(replanned=replanned)
-            info = {
-                "error": "no_schedule",
-                "segments": len(self.segments_log),
-                "action_mask": None,
-            }
-            return obs, -100.0, True, False, info
-    
-        active = self.schedule[(self.schedule.start <= self.now) & (self.schedule.end > self.now)]
-        completed = self.schedule[self.schedule.end <= self.now]
-        late = self.schedule[self.schedule.end > self.schedule.deadline]
-        congestion = int((active.groupby("device").size() ** 2).sum()) if len(active) else 0
-    
-        progress_bonus = 0.0
-        completion_bonus = 0.0
-    
-        for idx, seg in self.schedule.iterrows():
-            prev_state = self.segment_states.get(idx, 0)
-            current_state = 0
-    
-            if self.now >= seg["start"]:
-                current_state = 1
-            if self.now >= seg["end"]:
-                current_state = 2
-    
-            if current_state > prev_state:
-                progress_bonus += 1.0
-            if current_state == 2 and prev_state < 2:
-                completion_bonus += 1.0
-    
-            self.segment_states[idx] = current_state
-    
-        late_penalty = min(len(late), 10)
-        cong_penalty = min(congestion, 20)
-        mig_penalty = min(float(migration_cost), 100.0)
-    
-        reward = (
-            -0.02 * float(cong_penalty)
-            - 0.1 * float(late_penalty)
-            - 0.01 * float(len(active))
-            - 0.01 * float(mig_penalty)
-            + 0.2 * float(replanned)
-            + 0.01 * float(continuity_bonus)
-            + 0.15 * float(progress_bonus)
-            + 0.3 * float(completion_bonus)
-        )
-    
-        terminated = self.now >= int(self.schedule["end"].max())
-        truncated = self.now >= self.episode_limit
-    
-        obs = self._observe(replanned=replanned)
-        t3 = time.perf_counter()
-    
-        #if replanned:
-        #    print(f"[STEP] apply={t1-t0:.4f}s solve={t2-t1:.4f}s compute={t3-t2:.4f}s total={t3-t0:.4f}s")
-    
-        info = {
-            "time": int(self.now),
-            "active_tasks": int(len(active)),
-            "completed_tasks": int(len(completed)),
-            "late_tasks": int(len(late)),
-            "congestion": int(congestion),
-            "replanned": int(replanned),
-            "migration_cost": float(migration_cost),
-            "continuity_bonus": float(continuity_bonus),
-            "progress_bonus": float(progress_bonus),
-            "completion_bonus": float(completion_bonus),
-            "segments": int(len(self.segments_log)),
-            "segment_counter": int(self.segment_counter),
-            "action_mask": None,
-        }
-    
-        action_list = np.asarray(action).astype(int).tolist()
-        self._log({
-            "event": "step",
-            "time": int(self.now),
-            "action": action_list,
-            "reward": float(reward),
-            "info": info,
-            "segments_last": self.segments_log[-1] if self.segments_log else None,
-        })
-    
-        with open(DEBUG_LOG, "a", encoding="utf-8") as f:
-            f.write("----- STEP DEBUG -----\n")
-            f.write(f"action = {action_list}\n")
-            f.write(f"time = {self.now}\n")
-            f.write(f"replanned = {replanned}\n")
-            f.write(f"migration_cost = {migration_cost}\n")
-            f.write(f"continuity_bonus = {continuity_bonus}\n")
-            f.write(f"progress_bonus = {progress_bonus}\n")
-            f.write(f"completion_bonus = {completion_bonus}\n")
-            f.write(f"active = {len(active)}\n")
-            f.write(f"late = {len(late)}\n")
-            f.write(f"congestion = {congestion}\n")
-            f.write(f"reward = {reward}\n")
-            f.write("----------------------\n")
-    
-        return obs, reward, terminated, truncated, info   
-
-
     def step(self, action):
+        
+        
+        #if hasattr(self, "failure_scenario") and self.failure_scenario is not None:
+        #    self.failure_scenario.apply(self)
+        
         t0 = time.perf_counter()
         
         replanned, migration_cost, continuity_bonus = self.apply_action(action)
@@ -482,7 +356,6 @@ class APICEnv(gym.Env):
         cong_penalty = min(congestion, 20)
         mig_penalty = min(float(migration_cost), 100.0)
     
-        # NEW: bonus si le nombre de tâches en retard diminue
         delta_late = self.prev_late_tasks - len(late)
         late_improvement_bonus = max(delta_late, 0)
         self.prev_late_tasks = len(late)
@@ -496,7 +369,7 @@ class APICEnv(gym.Env):
             + 0.01 * float(continuity_bonus)
             + 0.15 * float(progress_bonus)
             + 0.3 * float(completion_bonus)
-            + 0.5 * float(late_improvement_bonus)
+            + 0.5 * float(late_improvement_bonus)  
         )
     
         terminated = self.now >= int(self.schedule["end"].max())

@@ -2,6 +2,7 @@
 # HybridHPCScheduler is an experimental framework for the development of an AI-based APIC system.
 # It focuses on intelligent scheduling and resource orchestration in heterogeneous HPC environments.
 
+# Todo : add FailureScenario
 
 import argparse
 from pathlib import Path
@@ -12,15 +13,25 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 
 from apic.model import APICModel, create_model
 from apic.env import APICEnv
+from apic.scenarios import FailureScenario
 
 
 def make_world(config_path=None):
     return create_model(config_path)
 
 
-def make_env(trace_file="output/trace.jsonl", config_path=None):
-    return APICEnv(make_world(config_path), trace_file=trace_file)
+#def make_env(trace_file="output/trace.jsonl", config_path=None):
+#    return APICEnv(make_world(config_path), trace_file=trace_file)
 
+def make_env(trace_file="output/trace.jsonl", config_path=None, failure_demo=False):
+    env = APICEnv(make_world(config_path), trace_file=trace_file)
+    if failure_demo:
+        # Must be defined for FailureScenario
+        env.failure_scenario = FailureScenario.from_dicts([
+            {"time": 5000, "device": "GPU0", "action": "fail"},
+            {"time": 15000, "device": "GPU0", "action": "recover"},
+        ])
+    return env
 
 def run_show_config(config_path):
     from apic.model import print_config_summary
@@ -45,8 +56,26 @@ def run_guide(config_path, output_path):
     from apic.model import generate_beginner_guide
     generate_beginner_guide(config_path, output_path)
 
-def run_train(output_dir, config_path=None):
-    env = make_env(trace_file=str(output_dir / "train_trace.jsonl"), config_path=config_path)
+#def run_train(output_dir, config_path=None):
+#    env = make_env(trace_file=str(output_dir / "train_trace.jsonl"), config_path=config_path)
+#    check_env(env, warn=True)
+
+#    vec_env = DummyVecEnv([lambda: make_env(
+#        trace_file=str(output_dir / "train_vec_trace.jsonl"),
+#        config_path=config_path
+#    )])
+#    agent = PPO("MultiInputPolicy", vec_env, verbose=1)
+#    agent.learn(total_timesteps=5000)
+#    agent.save(str(output_dir / "apic_ppo_segmented"))
+#    env.close()
+
+
+def run_train(output_dir, config_path=None, failure_demo=False):
+    env = make_env(
+        trace_file=str(output_dir / "train_trace.jsonl"),
+        config_path=config_path,
+        failure_demo=failure_demo,
+    )
     check_env(env, warn=True)
 
     vec_env = DummyVecEnv([lambda: make_env(
@@ -57,7 +86,6 @@ def run_train(output_dir, config_path=None):
     agent.learn(total_timesteps=5000)
     agent.save(str(output_dir / "apic_ppo_segmented"))
     env.close()
-
 
 def run_evaluate(output_dir, config_path=None):
     agent = PPO.load(str(output_dir / "apic_ppo_segmented"))
@@ -309,6 +337,12 @@ def main():
         help="Output path for visualization"
    )
     
+    parser.add_argument(
+        "--failure_demo",
+        action="store_true",
+        help="Enable a demo device failure scenario during training/benchmark."
+    )
+    
     
     args = parser.parse_args()
 
@@ -371,6 +405,9 @@ def main():
         
     elif args.mode == "report":
         run_report(output_dir)
+        
+    #elif args.mode == "scan_exascale":
+    #    run_report(output_dir)
 
 
 if __name__ == "__main__":
