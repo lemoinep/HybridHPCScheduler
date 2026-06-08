@@ -231,7 +231,7 @@ int main(int argc, char** argv) {
     }
 
     // On Linux, enable I/O device discovery so we see GPUs, etc.
-    unsigned io_flags = HWLOC_TOPOLOGY_FLAG_IO_DEVICES | HWLOC_TOPOLOGY_FLAG_IO_BRIDGES;
+    unsigned io_flags = HWLOC_TOPOLOGY_FLAG_NO_DISTANCES | HWLOC_TOPOLOGY_FLAG_NO_MEMATTRS;
     hwloc_topology_set_flags(topo, io_flags);
 
     if (hwloc_topology_load(topo) != 0) {
@@ -343,7 +343,7 @@ int main(int argc, char** argv) {
             if (!osdev->attr) continue;
             hwloc_obj_osdev_type_e type = osdev->attr->osdev.type;
 
-            if (type == HWLOC_OBJ_OSDEV_GPU || (osdev->attr->osdev.types & HWLOC_OBJ_OSDEV_GPU)) {
+            if (type == HWLOC_OBJ_OSDEV_GPU || (osdev->attr->osdev.type & HWLOC_OBJ_OSDEV_GPU)) {
                 DeviceInfo d;
                 d.name       = "GPU" + std::to_string(real_gpu_count);
                 d.kind       = "gpu";
