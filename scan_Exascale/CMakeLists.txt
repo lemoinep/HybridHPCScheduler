@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
-project(ScanExascale LANGUAGES CXX)
+
+project(ScanExascaleForLinux
+    VERSION 1.4.0
+    DESCRIPTION "Hybrid HPC Scheduler Hardware Scanner (CPU/GPU/NPU/TPU/DPU) for Linux"
+    LANGUAGES CXX
+)
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

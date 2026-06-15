@@ -1,8 +1,9 @@
 #define NOMINMAX
 
 // Author(s): Dr. Patrick Lemoine
-// Version 1.3 (Linux) 06/06/2026 — CPU = PUs, real GPU detection via hwloc
-// Note: NPU, TPU, DPU are synthetic accelerators controlled by configuration or cluster description.
+// Version 1.4 (Linux) 06/06/2026 — CPU = PUs, real GPU detection via hwloc, real NPU/TPU/DPU via sysfs
+// Note: NPU, TPU, DPU can be synthetic accelerators controlled by configuration or cluster description,
+//       or real devices detected via /sys (configurable).
 
 #include <hwloc.h>
 #include <yaml-cpp/yaml.h>
@@ -15,6 +16,8 @@
 #include <map>
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 struct SimConfig {
     int gpu_count_sim = 0;
@@ -78,7 +81,7 @@ struct SimConfig {
     bool enable_synthetic_accels = true; // synthetic NPU/TPU/DPU
 
     bool verbose = false;           // verbose logging
-
+    bool detect_real_accels = true;
     std::string node_type;          // logical node type from cluster description
     std::string cluster_desc = "ClusterDescription.yaml";
 };
@@ -95,6 +98,15 @@ struct DeviceInfo {
     int cache_lat = 0;
     int cache_bw = 0;
     bool is_real = false;
+
+    std::string bus;        // "pci" or "usb"
+    std::string addr;       // "0000:04:00.0" or "1-4"
+    std::string vendor_id;
+    std::string device_id;
+    std::string vendor_name;
+    std::string device_name;
+    std::string driver;
+    double confidence = 0.0;
 };
 
 static int nbobjs(hwloc_topology_t topo, hwloc_obj_type_t type) {
@@ -161,6 +173,209 @@ static std::string npu_name(int i) { return "NPU" + std::to_string(i); }
 static std::string tpu_name(int i) { return "TPU" + std::to_string(i); }
 static std::string dpu_name(int i) { return "DPU" + std::to_string(i); }
 
+
+static std::string read_file_trim(const fs::path& p) {
+    std::ifstream f(p);
+    if (!f) return {};
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    std::string s = ss.str();
+    while (!s.empty() && (s.back()=='\n' || s.back()=='\r' || s.back()==' ' || s.back()=='\t'))
+        s.pop_back();
+    return s;
+}
+
+static std::string lower_str(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+    return s;
+}
+
+static bool icontains(const std::string& haystack, const std::string& needle) {
+    return lower_str(haystack).find(lower_str(needle)) != std::string::npos;
+}
+
+static std::string hexnorm_str(const std::string& s) {
+    std::string x = s;
+    if (x.rfind("0x", 0) == 0 || x.rfind("0X", 0) == 0) x = x.substr(2);
+    return lower_str(x);
+}
+
+// minimalist stubs for future pci.ids/usb.ids integration
+static std::string lookup_pci_vendor(const std::string&) { return {}; }
+static std::string lookup_pci_device(const std::string&, const std::string&) { return {}; }
+
+// Heuristic classification NPU/TPU/DPU based on strings
+static void classify_accel(DeviceInfo& d) {
+    std::string blob = d.vendor_id + " " + d.device_id + " " +
+                       d.vendor_name + " " + d.device_name + " " +
+                       d.driver + " " + d.name;
+
+    d.confidence = 0.0;
+
+    if (d.bus == "usb") {
+        if (icontains(blob, "coral") || icontains(blob, "edgetpu") || icontains(blob, "google tpu")) {
+            d.kind = "tpu";
+            d.confidence = 0.98;
+            return;
+        }
+    }
+
+    if (d.bus == "pci") {
+        if (icontains(blob, "amdxdna") || icontains(blob, "ryzen ai") || icontains(blob, "npu")) {
+            d.kind = "npu";
+            d.confidence = 0.97;
+            return;
+        }
+        if (icontains(blob, "intel_vpu") || icontains(blob, "intel npu") ||
+            (icontains(blob, "vpu") && !icontains(blob, "gpu"))) {
+            d.kind = "npu";
+            d.confidence = 0.97;
+            return;
+        }
+        if (icontains(blob, "bluefield") || icontains(blob, "mellanox") || icontains(blob, "dpu")) {
+            d.kind = "dpu";
+            d.confidence = 0.95;
+            return;
+        }
+    }
+
+   
+}
+
+// Scan real NPU/TPU/DPU via sysfs and push them into devices
+static void ScanRealAccelerators(const SimConfig& cfg, std::vector<DeviceInfo>& devices) {
+    if (!cfg.detect_real_accels) return;
+
+    // PCI devices
+    if (fs::exists("/sys/bus/pci/devices")) {
+        for (const auto& e : fs::directory_iterator("/sys/bus/pci/devices")) {
+            if (!e.is_directory()) continue;
+            fs::path p = e.path();
+            DeviceInfo d;
+
+            d.bus       = "pci";
+            d.addr      = p.filename().string();
+            d.vendor_id = hexnorm_str(read_file_trim(p / "vendor"));
+            d.device_id = hexnorm_str(read_file_trim(p / "device"));
+            try {
+                if (fs::exists(p / "driver"))
+                    d.driver = fs::read_symlink(p / "driver").filename().string();
+            } catch (...) {}
+
+            d.vendor_name = lookup_pci_vendor(d.vendor_id);
+            d.device_name = lookup_pci_device(d.vendor_id, d.device_id);
+            d.name        = "ACCEL_pci_" + d.addr;
+
+            classify_accel(d);
+
+            if (d.kind == "npu" || d.kind == "tpu" || d.kind == "dpu") {
+                d.is_real = true;
+
+                if (d.kind == "npu") {
+                    d.speed     = cfg.npu_speed;
+                    d.threads   = cfg.npu_threads;
+                    d.dram_cap  = cfg.npu_mem_capacity;
+                    d.dram_lat  = cfg.npu_mem_latency;
+                    d.dram_bw   = cfg.npu_mem_bandwidth;
+                    d.cache_cap = cfg.npu_cache_capacity;
+                    d.cache_lat = cfg.npu_cache_latency;
+                    d.cache_bw  = cfg.npu_cache_bandwidth;
+                    d.name      = "NPU_real_" + d.addr;
+                } else if (d.kind == "tpu") {
+                    d.speed     = cfg.tpu_speed;
+                    d.threads   = cfg.tpu_threads;
+                    d.dram_cap  = cfg.tpu_mem_capacity;
+                    d.dram_lat  = cfg.tpu_mem_latency;
+                    d.dram_bw   = cfg.tpu_mem_bandwidth;
+                    d.cache_cap = cfg.tpu_cache_capacity;
+                    d.cache_lat = cfg.tpu_cache_latency;
+                    d.cache_bw  = cfg.tpu_cache_bandwidth;
+                    d.name      = "TPU_real_" + d.addr;
+                } else if (d.kind == "dpu") {
+                    d.speed     = cfg.dpu_speed;
+                    d.threads   = cfg.dpu_threads;
+                    d.dram_cap  = cfg.dpu_mem_capacity;
+                    d.dram_lat  = cfg.dpu_mem_latency;
+                    d.dram_bw   = cfg.dpu_mem_bandwidth;
+                    d.cache_cap = cfg.dpu_cache_capacity;
+                    d.cache_lat = cfg.dpu_cache_latency;
+                    d.cache_bw  = cfg.dpu_cache_bandwidth;
+                    d.name      = "DPU_real_" + d.addr;
+                }
+
+                devices.push_back(d);
+            }
+        }
+    }
+
+    // USB devices (for example Coral Edge TPU)
+    if (fs::exists("/sys/bus/usb/devices")) {
+        for (const auto& e : fs::directory_iterator("/sys/bus/usb/devices")) {
+            if (!e.is_directory()) continue;
+            fs::path p = e.path();
+
+            std::string vid = read_file_trim(p / "idVendor");
+            std::string pid = read_file_trim(p / "idProduct");
+            if (vid.empty() || pid.empty()) continue;
+
+            DeviceInfo d;
+            d.bus        = "usb";
+            d.addr       = p.filename().string();
+            d.vendor_id  = lower_str(vid);
+            d.device_id  = lower_str(pid);
+            d.name       = read_file_trim(p / "product");
+            try {
+                if (fs::exists(p / "driver"))
+                    d.driver = fs::read_symlink(p / "driver").filename().string();
+            } catch (...) {}
+
+            classify_accel(d);
+
+            if (d.kind == "tpu" || d.kind == "npu" || d.kind == "dpu") {
+                d.is_real = true;
+
+                if (d.kind == "tpu") {
+                    d.speed     = cfg.tpu_speed;
+                    d.threads   = cfg.tpu_threads;
+                    d.dram_cap  = cfg.tpu_mem_capacity;
+                    d.dram_lat  = cfg.tpu_mem_latency;
+                    d.dram_bw   = cfg.tpu_mem_bandwidth;
+                    d.cache_cap = cfg.tpu_cache_capacity;
+                    d.cache_lat = cfg.tpu_cache_latency;
+                    d.cache_bw  = cfg.tpu_cache_bandwidth;
+                    if (d.name.empty())
+                        d.name = "TPU_real_" + d.addr;
+                } else if (d.kind == "npu") {
+                    d.speed     = cfg.npu_speed;
+                    d.threads   = cfg.npu_threads;
+                    d.dram_cap  = cfg.npu_mem_capacity;
+                    d.dram_lat  = cfg.npu_mem_latency;
+                    d.dram_bw   = cfg.npu_mem_bandwidth;
+                    d.cache_cap = cfg.npu_cache_capacity;
+                    d.cache_lat = cfg.npu_cache_latency;
+                    d.cache_bw  = cfg.npu_cache_bandwidth;
+                    if (d.name.empty())
+                        d.name = "NPU_real_" + d.addr;
+                } else if (d.kind == "dpu") {
+                    d.speed     = cfg.dpu_speed;
+                    d.threads   = cfg.dpu_threads;
+                    d.dram_cap  = cfg.dpu_mem_capacity;
+                    d.dram_lat  = cfg.dpu_mem_latency;
+                    d.dram_bw   = cfg.dpu_mem_bandwidth;
+                    d.cache_cap = cfg.dpu_cache_capacity;
+                    d.cache_lat = cfg.dpu_cache_latency;
+                    d.cache_bw  = cfg.dpu_cache_bandwidth;
+                    if (d.name.empty())
+                        d.name = "DPU_real_" + d.addr;
+                }
+
+                devices.push_back(d);
+            }
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     SimConfig cfg;
 
@@ -183,10 +398,12 @@ int main(int argc, char** argv) {
     bool no_real_cpu = false;
     bool no_real_gpu = false;
     bool no_sim_gpu  = false;
+    bool no_real_accels = false; 
 
     add_arg_bool(argc, argv, "--no-real-cpu", no_real_cpu);
     add_arg_bool(argc, argv, "--no-real-gpu", no_real_gpu);
     add_arg_bool(argc, argv, "--no-sim-gpu",  no_sim_gpu);
+    add_arg_bool(argc, argv, "--no-real-accels", no_real_accels); 
     add_arg_bool(argc, argv, "--real",        cfg.real_only);
     add_arg_bool(argc, argv, "--verbose",     cfg.verbose);
 
@@ -204,6 +421,7 @@ int main(int argc, char** argv) {
     if (no_real_cpu) cfg.detect_cpu_real = false;
     if (no_real_gpu) cfg.detect_gpu_real = false;
     if (no_sim_gpu)  cfg.add_simulated_gpu = false;
+    if (no_real_accels) cfg.detect_real_accels = false;
 
     // Real-only mode: no simulated accelerators at all
     if (cfg.real_only) {
@@ -230,7 +448,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // On Linux, enable I/O device discovery so we see GPUs, etc.
     unsigned io_flags = HWLOC_TOPOLOGY_FLAG_NO_DISTANCES | HWLOC_TOPOLOGY_FLAG_NO_MEMATTRS;
     hwloc_topology_set_flags(topo, io_flags);
 
@@ -240,10 +457,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // PUs = logical processors (Linux CPU 0..N)
     int pus  = nbobjs(topo, HWLOC_OBJ_PU);
 
-    // If node_type is defined, we may override PUs and accelerator counts from cluster description
+    // Cluster description override
     if (!cfg.node_type.empty()) {
         try {
             YAML::Node cluster = YAML::LoadFile(cfg.cluster_desc);
@@ -335,9 +551,8 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Real GPUs via OS devices (requires hwloc built with GPU backends)
+    // Real GPUs via hwloc OS devices
     if (cfg.detect_gpu_real && cfg.node_type.empty()) {
-        // In node_type mode we typically want synthetic counts, so only probe when node_type is empty
         hwloc_obj_t osdev = nullptr;
         while ((osdev = hwloc_get_next_obj_by_type(topo, HWLOC_OBJ_OS_DEVICE, osdev)) != nullptr) {
             if (!osdev->attr) continue;
@@ -363,7 +578,10 @@ int main(int argc, char** argv) {
         gpu_idx = real_gpu_count;
     }
 
-    // Simulated GPUs (only if not in real-only mode and flag enabled)
+    // real NPU/TPU/DPU via sysfs
+    ScanRealAccelerators(cfg, devices);
+
+    // Simulated GPUs
     if (cfg.add_simulated_gpu && !cfg.real_only) {
         int target_gpus = (cfg.gpu_count_sim > 0) ? cfg.gpu_count_sim : 2;
 
@@ -384,7 +602,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Simulated NPUs / TPUs / DPUs (synthetic accelerators)
+    // Simulated NPUs / TPUs / DPUs
     if (cfg.enable_synthetic_accels) {
         for (int i = 0; i < cfg.npu_count; ++i) {
             DeviceInfo d;
@@ -508,21 +726,29 @@ int main(int argc, char** argv) {
     std::string tpu0 = (cfg.enable_synthetic_accels && cfg.tpu_count > 0) ? tpu_name(0) : "";
 
     if (!dpu0.empty())
-        add_task("ingest",      40,  512,  64,  64, "dpu", cfg.task_priority_base,                cfg.task_deadline_base,          dpu0);
+        add_task("ingest",      40,  512,  64,  64, "dpu", cfg.task_priority_base,
+                 cfg.task_deadline_base,          dpu0);
     if (!cpu0.empty())
-        add_task("decode",      80, 1024, 128, 128, "cpu", cfg.task_priority_base,                cfg.task_deadline_base + 2000,   cpu0);
+        add_task("decode",      80, 1024, 128, 128, "cpu", cfg.task_priority_base,
+                 cfg.task_deadline_base + 2000,   cpu0);
     if (!cpu0.empty())
-        add_task("preprocess", 120, 2048, 256, 256, "cpu", cfg.task_priority_base + 1,            cfg.task_deadline_base + 4000,   cpu0);
+        add_task("preprocess", 120, 2048, 256, 256, "cpu", cfg.task_priority_base + 1,
+                 cfg.task_deadline_base + 4000,   cpu0);
     if (!gpu0.empty())
-        add_task("infer_a",    500, 4096, 512, 256, "gpu", 10,                                    cfg.task_deadline_base + 8000,   gpu0);
+        add_task("infer_a",    500, 4096, 512, 256, "gpu", 10,
+                 cfg.task_deadline_base + 8000,   gpu0);
     if (!npu0.empty())
-        add_task("infer_b",    420, 4096, 512, 256, "npu", 9,                                     cfg.task_deadline_base + 8000,   npu0);
+        add_task("infer_b",    420, 4096, 512, 256, "npu", 9,
+                 cfg.task_deadline_base + 8000,   npu0);
     if (!tpu0.empty())
-        add_task("fuse",        90, 1024, 128, 128, "tpu", 8,                                     cfg.task_deadline_base + 11000,  tpu0);
+        add_task("fuse",        90, 1024, 128, 128, "tpu", 8,
+                 cfg.task_deadline_base + 11000,  tpu0);
     if (!cpu1.empty())
-        add_task("postprocess", 70, 1024, 128, 128, "cpu", 6,                                     cfg.task_deadline_base + 14000,  cpu1);
+        add_task("postprocess", 70, 1024, 128, 128, "cpu", 6,
+                 cfg.task_deadline_base + 14000,  cpu1);
     if (!dpu0.empty())
-        add_task("store",       30,  512,  64,  64, "dpu", 2,                                     cfg.task_deadline_base + 16000,  dpu0);
+        add_task("store",       30,  512,  64,  64, "dpu", 2,
+                 cfg.task_deadline_base + 16000,  dpu0);
 
     root["tasks"] = tasks;
 
@@ -572,3 +798,4 @@ int main(int argc, char** argv) {
     hwloc_topology_destroy(topo);
     return 0;
 }
+
