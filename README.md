@@ -436,6 +436,32 @@ python main.py guide --config configs/<your_config>.yaml
 
 ---
 
+## Topology & accelerator scanners
+
+* **ScanExascaleForLinux.cpp** – Exascale workload generator
+ScanExascaleForLinux is a Linux utility that probes the node topology with hwloc, detects real CPUs and GPUs, and optionally discovers NPUs/TPUs/DPUs via sysfs. It then combines these real devices with configurable simulated accelerators to build a synthetic exascale node model. The program generates a YAML file (ScanExascale.yaml by default) describing devices, interconnect topology and a small end‑to‑end AI pipeline DAG (ingest → decode → preprocess → infer → fuse → postprocess → store) with priorities and deadlines. This YAML can be fed into the hybrid scheduler to benchmark scheduling policies across heterogeneous CPUs, GPUs, NPUs, TPUs and DPUs on realistic or purely synthetic configurations.
+
+```bash
+./ScanExascaleForLinux --verbose
+./ScanExascaleForLinux --output=MyNode.yaml
+./ScanExascaleForLinux --real --no-sim-gpu --no-real-accels
+./ScanExascaleForLinux --node-type=ai_node --cluster-desc=ClusterDescription.yaml
+```
+
+* **ScanExascaleReportAccelNTDu.cpp** – NPU/TPU/DPU detector
+ScanExascaleReportAccelNTDu is a C++ utility that scans a Linux node to detect AI and network accelerators such as NPUs, TPUs and DPUs. It walks the PCI and USB buses via sysfs, uses the system pci.ids and usb.ids databases, and classifies candidates based on IDs, drivers, class codes and textual fingerprints. The tool produces a human‑readable summary of detected accelerators, with an optional verbose mode that dumps detailed per‑device information. For integration into schedulers or inventory scripts, it can also output a structured JSON report and an optional CSV file with all decoded identification fields.
+
+```bash
+./ScanExascaleReportAccelNTDu
+./ScanExascaleReportAccelNTDu --verbose
+./ScanExascaleReportAccelNTDu --json
+./ScanExascaleReportAccelNTDu --csv accelerators.csv
+```
+
+---
+
+---
+
 ## 📝 **Author**
 
 **Dr. Patrick Lemoine**  
