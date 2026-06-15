@@ -438,6 +438,10 @@ python main.py guide --config configs/<your_config>.yaml
 
 ## Topology & accelerator scanners
 
+<p align="center">
+<img src="Images/P0004.jpg" width="100%" />
+</p>
+
 * **ScanExascaleForLinux.cpp** – Exascale workload generator
 ScanExascaleForLinux is a Linux utility that probes the node topology with hwloc, detects real CPUs and GPUs, and optionally discovers NPUs/TPUs/DPUs via sysfs. It then combines these real devices with configurable simulated accelerators to build a synthetic exascale node model. The program generates a YAML file (ScanExascale.yaml by default) describing devices, interconnect topology and a small end‑to‑end AI pipeline DAG (ingest → decode → preprocess → infer → fuse → postprocess → store) with priorities and deadlines. This YAML can be fed into the hybrid scheduler to benchmark scheduling policies across heterogeneous CPUs, GPUs, NPUs, TPUs and DPUs on realistic or purely synthetic configurations.
 
