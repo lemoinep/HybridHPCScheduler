@@ -3,6 +3,11 @@
 [![Version](https://img.shields.io/badge/version-1.0-green.svg)](https://github.com/lemoinep/HybridHPCScheduler)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![C++](https://img.shields.io/badge/C++-17%2B-informational.svg)](https://isocpp.org/)
+[![CUDA](https://img.shields.io/badge/CUDA-supported-brightgreen.svg)]()
+[![MPI](https://img.shields.io/badge/MPI-enabled-orange.svg)]()
+[![Slurm](https://img.shields.io/badge/Slurm-compatible-blueviolet.svg)]()
+[![PyTorch](https://img.shields.io/badge/PyTorch-RL-red.svg)](https://pytorch.org/)
 
 ---
 
