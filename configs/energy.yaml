@@ -1,0 +1,44 @@
+devices:
+  cpu_count: 16
+  gpu_count: 32
+  tpu_count: 9
+  npu_count: 9
+  dpu_count: 4
+
+simulation:
+  cpu:
+    temp_min: 45
+    temp_max: 85
+    power_min: 40
+    power_max: 180
+  gpu:
+    temp_min: 40
+    temp_max: 90
+    power_min: 80
+    power_max: 320
+  tpu:
+    temp_min: 35
+    temp_max: 80
+    power_min: 60
+    power_max: 250
+  npu:
+    temp_min: 35
+    temp_max: 80
+    power_min: 40
+    power_max: 200
+  dpu:
+    temp_min: 30
+    temp_max: 70
+    power_min: 20
+    power_max: 120
+
+graphics:
+  colormap: coolwarm
+  rows: 7
+  cols: 10
+  show_labels: true
+  
+amd:
+  mode: real        # "real" ou "simulated"
+  packages: 2       # nombre de packages AMD (pour wrapper perf ou stub)
+  interval_seconds: 0.1
