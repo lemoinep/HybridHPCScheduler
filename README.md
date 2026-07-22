@@ -469,6 +469,47 @@ ScanExascaleReportAccelNTDu is a C++ utility that scans a Linux node to detect A
 
 ---
 
+## Energy monitoring & heatmaps
+
+This project includes a prototype for energy and thermal visualization of exascale nodes.
+
+Tools:
+
+* **read_rapl_packages_intel.cpp** -  Reads Intel RAPL MSRs on Linux to estimate per‑package CPU power and prints a CSV:
+  `package_id,power_watts`.
+
+* **read_rapl_packages_amd_stub.cpp** - AMD stub backend that generates simulated per‑package power values in the same CSV format.
+
+* **read_rapl_packages_amd_real.cpp** - AMD backend using `perf stat -a -e power/energy-pkg/` over a short interval to get total energy,
+  convert it to average power, and split it across packages.
+
+* **energy_map.py**
+  Python script that:
+  - loads an energy config (`energy.yaml`) describing device counts and simulation ranges,
+  - calls the appropriate CPU backend (Intel or AMD, real or stub) and NVML for GPUs,
+  - writes `device_metrics.csv` and generates PNG heatmaps:
+    `energy_map_power.png` and `energy_map_temperature.png`.
+
+Example (simulated):
+
+```bash
+python energy_map.py \
+    --energy-config configs/energy.yaml \
+    --output outputs/energy_demo \
+    --mode simulated
+```
+
+Example (real, when backends are available):
+
+```bash
+python energy_map.py \
+    --energy-config configs/energy.yaml \
+    --topology configs/scan_exascale_hwloc.yaml \
+    --output outputs/energy_real \
+    --mode real
+```
+
+
 ---
 
 ## 📝 **Author**
